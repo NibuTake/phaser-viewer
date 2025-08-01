@@ -8,5 +8,5 @@
     "outDir": "out",
     "strict": true
   },
-  "exclude": ["node_modules", ".vscode-test"]
+  "exclude": ["node_modules", ".vscode-test", "examples", "src/components", "templates", "types"]
 }

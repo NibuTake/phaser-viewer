@@ -1,0 +1,24 @@
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- Eye outline with lashes -->
+  <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5z" 
+        fill="none" 
+        stroke="currentColor" 
+        stroke-width="1.5"/>
+  
+  <!-- Eyelashes -->
+  <path d="M5 3L6.5 5 M8 2L9 4.5 M11 1.5L11.5 4 M13 1.5L12.5 4 M16 2L15 4.5 M19 3L17.5 5" 
+        stroke="currentColor" 
+        stroke-width="1.2" 
+        stroke-linecap="round"/>
+  
+  <!-- Center circle -->
+  <circle cx="12" cy="12" r="4.5" 
+          fill="none" 
+          stroke="currentColor" 
+          stroke-width="1.5"/>
+  
+  <!-- P letter in center -->
+  <path d="M10 15V9h2.5c1.1 0 2 .9 2 2s-.9 2-2 2H10.8" 
+        fill="currentColor" 
+        stroke="none"/>
+</svg>

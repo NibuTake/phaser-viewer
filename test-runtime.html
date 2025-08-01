@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Play Function Runtime</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+</head>
+<body>
+    <div id="game-container"></div>
+    <script>
+        // Fallback Button class (same as in extension)
+        class Button extends Phaser.GameObjects.Container {
+            constructor(scene, x, y, text, config) {
+                super(scene, x, y);
+                
+                console.log('[Button] Creating button with args:', {scene, x, y, text, config});
+                
+                if (typeof x !== 'number') x = 400;
+                if (typeof y !== 'number') y = 300; 
+                
+                var width = (config && config.width) || 200;
+                var height = (config && config.height) || 60;
+                var color = (config && config.color) || 0x4CAF50;
+                
+                this.background = scene.add.rectangle(0, 0, width, height, color);
+                this.text = scene.add.text(0, 0, text, {
+                    fontSize: (config && config.fontSize) || '24px',
+                    color: (config && config.fontColor) || '#ffffff'
+                }).setOrigin(0.5);
+                
+                this.add([this.background, this.text]);
+                this.setSize(width, height);
+                this.setInteractive();
+                
+                this.x = x;
+                this.y = y;
+                
+                scene.add.existing(this);
+            }
+            
+            setColor(color) {
+                this.background.setFillStyle(color);
+            }
+            
+            setText(text) {
+                this.text.setText(text);
+            }
+        }
+
+        class PreviewScene extends Phaser.Scene {
+            constructor() {
+                super({ key: 'PreviewScene' });
+            }
+
+            create() {
+                // Story args
+                const args = {
+                    x: 400,
+                    y: 300,
+                    text: 'Animated!',
+                    config: {
+                        color: 0xFF6B35
+                    }
+                };
+                
+                // Create function
+                const createFunction = (scene, args) => {
+                    const button = new Button(scene, args.x, args.y, args.text, args.config);
+                    
+                    button.on('pointerdown', () => {
+                        console.log('Animated button clicked!');
+                    });
+                    
+                    return button;
+                };
+                
+                const component = createFunction(this, args);
+                
+                // Play function - this is what the extension generates
+                const playFunction = (scene, component) => {
+                    console.log('[Play] Starting animation demo for button:', component);
+                    
+                    // 1秒後にボタンを少し拡大
+                    scene.time.delayedCall(1000, () => {
+                        scene.tweens.add({
+                            targets: component,
+                            scaleX: 1.2,
+                            scaleY: 1.2,
+                            duration: 500,
+                            ease: 'Back.easeOut',
+                            yoyo: true
+                        });
+                    });
+                    
+                    // 3秒後に色を変える
+                    scene.time.delayedCall(3000, () => {
+                        component.setColor(0x9B59B6);
+                        
+                        // パルスアニメーション
+                        scene.tweens.add({
+                            targets: component,
+                            alpha: 0.5,
+                            duration: 300,
+                            yoyo: true,
+                            repeat: 2
+                        });
+                    });
+                    
+                    // 5秒後にテキストを変更
+                    scene.time.delayedCall(5000, () => {
+                        component.setText('Complete!');
+                        
+                        // 回転アニメーション
+                        scene.tweens.add({
+                            targets: component,
+                            rotation: Math.PI * 2,
+                            duration: 1000,
+                            ease: 'Power2.easeInOut'
+                        });
+                    });
+                };
+                
+                // Execute play function with delay
+                this.time.delayedCall(100, () => {
+                    try {
+                        playFunction(this, component);
+                        console.log('[PreviewScene] Play function executed successfully');
+                    } catch (error) {
+                        console.error('[PreviewScene] Error executing play function:', error);
+                    }
+                });
+            }
+        }
+
+        const config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            parent: 'game-container',
+            backgroundColor: '#2d2d2d',
+            scene: PreviewScene
+        };
+
+        const game = new Phaser.Game(config);
+    </script>
+</body>
+</html>

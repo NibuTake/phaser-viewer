@@ -1,26 +1,129 @@
 {
   "name": "phaser-viewer",
   "displayName": "Phaser Viewer",
-  "description": "A VSCode extension for Phaser development",
-  "version": "0.0.1",
+  "description": "Storybook-like preview tool for Phaser 3 GameObjects with interactive controls and live editing",
+  "version": "1.0.0",
+  "publisher": "your-publisher-name",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/phaser-viewer.git"
+  },
+  "homepage": "https://github.com/your-username/phaser-viewer#readme",
+  "bugs": {
+    "url": "https://github.com/your-username/phaser-viewer/issues"
+  },
+  "license": "MIT",
+  "keywords": [
+    "phaser",
+    "phaser3",
+    "game",
+    "gamedev",
+    "storybook",
+    "preview",
+    "gameobject",
+    "interactive",
+    "development"
+  ],
   "engines": {
     "vscode": "^1.74.0"
   },
-  "categories": ["Other"],
-  "activationEvents": [],
+  "enabledApiProposals": [],
+  "categories": ["Other", "Debuggers", "Visualization"],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./out/extension.js",
   "contributes": {
-    "commands": [{
-      "command": "phaser-viewer.helloWorld",
-      "title": "Hello World"
-    }]
+    "commands": [
+      {
+        "command": "phaser-viewer.openPreview",
+        "title": "Phaser Viewer: Open Preview"
+      },
+      {
+        "command": "phaser-viewer.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "phaser-viewer.openGameObject",
+        "title": "Open in New Tab",
+        "icon": "$(go-to-file)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "phaser-viewer-container",
+          "title": "Phaser Viewer",
+          "icon": "resources/sidebar-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "phaser-viewer-container": [
+        {
+          "id": "phaserViewer",
+          "name": "Demos",
+          "icon": "$(eye)",
+          "contextualTitle": "Phaser Demos"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "phaser-viewer.refresh",
+          "when": "view == phaserViewer",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "phaser-viewer.openGameObject",
+          "when": "view == phaserViewer",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Phaser Viewer",
+      "properties": {
+        "phaserViewer.canvas.width": {
+          "type": "number",
+          "default": 800,
+          "minimum": 400,
+          "maximum": 1920,
+          "description": "Preview canvas width in pixels"
+        },
+        "phaserViewer.canvas.height": {
+          "type": "number",
+          "default": 600,
+          "minimum": 300,
+          "maximum": 1080,
+          "description": "Preview canvas height in pixels"
+        },
+        "phaserViewer.canvas.backgroundColor": {
+          "type": "string",
+          "default": "#2d2d2d",
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "description": "Preview canvas background color (hex format, e.g., #2d2d2d)"
+        },
+        "phaserViewer.canvas.renderer": {
+          "type": "string",
+          "enum": ["AUTO", "WEBGL", "CANVAS"],
+          "default": "AUTO",
+          "description": "Phaser renderer type"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src",
+    "lint": "eslint src --ext .ts",
     "test": "vscode-test"
   },
   "devDependencies": {
