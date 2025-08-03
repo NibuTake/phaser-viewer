@@ -1,294 +1,227 @@
 # Phaser Viewer
 
-> 🎮 **Storybook for Phaser 3** - A VSCode extension that provides a visual development environment for Phaser 3 GameObjects with interactive controls and live editing.
+A Storybook-like development environment for Phaser 3 components with interactive testing capabilities.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
-![VSCode](https://img.shields.io/badge/vscode-%5E1.74.0-brightgreen.svg)
-![Phaser](https://img.shields.io/badge/phaser-3.70.0-orange.svg)
+## Features
 
-<!-- Screenshots will be added here when available -->
-<!-- ![Main Interface](images/main-interface.png) -->
+- 🎮 **Storybook-style UI** - Hierarchical sidebar with folders and stories
+- 🧪 **Interactive Testing** - Built-in assert functions with visual feedback 
+- ✅ **Test Results** - Success/Failed badges and detailed logs
+- 🎯 **Component Isolation** - Test individual Phaser components in isolation
+- 🔥 **Hot Reload** - Instant feedback during development
 
-## 🎯 What is Phaser Viewer?
+## Installation
 
-Phaser Viewer brings the **Storybook** development experience to **Phaser 3** game development. Just like how Storybook lets you develop UI components in isolation, Phaser Viewer lets you build and test Phaser 3 GameObjects, animations, and interactions in a dedicated preview environment.
+```bash
+npm install phaser-viewer
+```
 
-**Perfect for:**
-- 🎮 Game developers building with Phaser 3
-- 🎨 Designers prototyping game UI and animations  
-- 👨‍🏫 Educators teaching game development
-- 📚 Teams documenting game components
+## Quick Start
 
-## ✨ Features
+### 1. Create a demo file
 
-- 🎯 **Storybook-like Preview** - Isolated development environment for Phaser 3 GameObjects
-- 📁 **Tree View with Hierarchy** - Organized folder structure display in VSCode sidebar
-- 🎮 **Interactive Controls** - Restart, Reset, Pause/Resume your scenes with built-in controls
-- 🔍 **Interactive Elements Inspector** - Auto-detect and highlight clickable objects
-- 🔄 **Hot Reload** - Instant updates when you modify demo files
-- ⚙️ **Customizable Canvas** - Adjustable size, background color, and renderer type
-- 📝 **Type-Safe Development** - Full TypeScript support with proper type inference
-- 🎨 **Live Editing** - See changes immediately as you code
-- 👁️ **Preview Mode** - Single-click preview or persistent tabs for multi-demo development
-- 📦 **Modular Architecture** - Separate example objects from demo files for better organization
+Create a `.demo.ts` file in your project:
 
-## 🚀 Quick Start
-
-### 1. Install the Extension
-Search for "Phaser Viewer" in the VSCode Extensions marketplace and install it.
-
-> **Note**: Currently in development. Install from source or wait for marketplace release.
-
-### 2. Create Your First Demo
-Create example objects and demo files:
-
-**Step 1: Create an example object** (`examples/bouncing-ball.ts`):
 ```typescript
-export const bouncingBall = {
-    title: 'Bouncing Ball',
-    description: 'A green ball that bounces up and down',
-    create: (scene: Phaser.Scene) => {
-        const ball = scene.add.circle(400, 300, 50, 0x00ff00);
-        
-        scene.tweens.add({
-            targets: ball,
-            y: 100,
-            duration: 1000,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Bounce.easeOut'
-        });
-    }
+// Button.demo.ts
+import { Button } from './Button';
+
+export default {
+  title: 'UI/Button',
+  description: 'Interactive button component',
+  tags: ['ui', 'interactive']
+};
+
+export const Default = {
+  name: 'Default Button',
+  args: {
+    x: 400,
+    y: 300,
+    text: 'Click Me!',
+    config: { color: 0x4CAF50 }
+  },
+  create: (scene: Phaser.Scene, args: any) => {
+    return new Button(scene, args.x, args.y, args.text, args.config);
+  },
+  play: async (scene: Phaser.Scene, component: any) => {
+    // Test the component
+    window.assert(component !== null, 'Button should exist');
+    window.assertEquals(component.getText(), 'Click Me!', 'Button text should be correct');
+  }
 };
 ```
 
-**Step 2: Create a demo file** (`examples/bouncing-ball.demo.ts`):
-```typescript
-import { bouncingBall } from './bouncing-ball';
+### 2. Use PhaserViewer
 
-export default bouncingBall.create;
+```typescript
+import { PhaserViewer } from 'phaser-viewer';
+import { createRoot } from 'react-dom/client';
+
+const root = createRoot(document.getElementById('root')!);
+root.render(<PhaserViewer />);
 ```
 
-### 3. Open Phaser Viewer
-1. Click the **👁 Phaser Viewer** icon in the Activity Bar (left sidebar)
-2. Your demo will appear in the **Demos** tree view
-3. Single-click to preview, or right-click → "Open in New Tab" for persistent view
+## Folder Structure
 
-## 📖 Documentation
-
-### Demo File Format
-
-**New Object-Based Format (Recommended):**
-
-1. **Example Object File** (`.ts`):
-```typescript
-export const myExample = {
-    title: 'My GameObject',
-    description: 'Description of what this does',
-    create: (scene: Phaser.Scene) => {
-        // Your Phaser code here with full TypeScript support
-        const sprite = scene.add.sprite(x, y, texture);
-    }
-};
+```
+examples/
+├── animation/          # Animation related demos
+│   ├── rotating-star.demo.ts
+│   └── animated-circle.demo.ts
+├── ui/                 # UI component demos
+│   ├── button.demo.ts
+│   └── sprite.demo.ts
+├── interaction/        # Interaction demos
+│   └── text-interactive.demo.ts
+└── [category]/         # Custom categories
 ```
 
-2. **Demo File** (`.demo.ts`):
+## API Reference
+
+### Story Structure
+
 ```typescript
-import { myExample } from './my-example';
-
-export default myExample.create;
-```
-
-This approach provides better organization, type safety, and reusability.
-
-### Interactive Controls
-
-- **▶ Restart** - Restart the scene from the beginning
-- **⟲ Reset** - Completely reset the Phaser game instance
-- **⏸ Pause/Resume** - Pause or resume all animations and updates
-- **🎯 Interactive (N)** - View and highlight interactive elements
-
-### Canvas Settings
-
-Customize your preview canvas through VSCode settings:
-
-```json
-{
-  "phaserViewer.canvas.width": 800,
-  "phaserViewer.canvas.height": 600,
-  "phaserViewer.canvas.backgroundColor": "#2d2d2d",
-  "phaserViewer.canvas.renderer": "AUTO"
+interface Story {
+  name: string;
+  create: (scene: Phaser.Scene, args?: any) => any;
+  args?: any;
+  play?: (scene: Phaser.Scene, component?: any) => void | Promise<void>;
 }
 ```
 
-## 🎨 Examples
+### Testing Functions
 
-### Basic Shapes
+- `window.assert(condition: boolean, message: string)` - Assert a condition
+- `window.assertEquals(actual: any, expected: any, message: string)` - Assert equality
 
-**Example Object** (`examples/basic-shapes.ts`):
+### Components
+
+- `PhaserViewer` - Main viewer component
+- `PhaserPreview` - Individual story preview
+- `Sidebar` - Story navigation sidebar
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build library
+npm run build:lib
+
+# Lint code
+npm run lint
+```
+
+## Examples
+
+Check the `/examples` folder for sample stories and components.
+
+## Creating Custom Components
+
+### 1. Create a reusable component
 ```typescript
-export const basicShapes = {
-    title: 'Basic Shapes',
-    description: 'Rectangle, circle, and text examples',
+// components/MySprite.ts
+export class MySprite extends Phaser.GameObjects.Sprite {
+    constructor(scene: Phaser.Scene, x: number, y: number) {
+        super(scene, x, y, 'texture-key');
+        scene.add.existing(this);
+    }
+    
+    customMethod() {
+        // Custom functionality
+    }
+}
+```
+
+### 2. Create a demo story
+```typescript
+// examples/ui/my-sprite.demo.ts
+import { MySprite } from '../../components/MySprite';
+
+export default {
+  title: 'UI/MySprite',
+  description: 'Custom sprite component'
+};
+
+export const Example = {
+    name: 'My Sprite Example',
     create: (scene: Phaser.Scene) => {
-        // Rectangle
-        const rect = scene.add.rectangle(200, 200, 100, 100, 0xff0000);
-        
-        // Circle
-        const circle = scene.add.circle(400, 200, 50, 0x00ff00);
-        
-        // Text
-        scene.add.text(300, 350, 'Hello Phaser!', {
-            fontSize: '32px',
-            color: '#ffffff'
-        }).setOrigin(0.5);
+        const sprite = new MySprite(scene, 400, 300);
+        sprite.customMethod();
+        return sprite;
+    },
+    play: async (scene: Phaser.Scene, component: MySprite) => {
+        window.assert(component !== null, 'Sprite should exist');
+        // Test your component functionality
     }
 };
 ```
 
-**Demo File** (`examples/basic-shapes.demo.ts`):
+## Available Resources
+
+### Phaser Objects
+- `scene.add.*` - All game objects
+- `scene.tweens.*` - Animations
+- `scene.physics.*` - Physics system
+- `scene.input.*` - Input handling
+
+### Icon Resources
 ```typescript
-import { basicShapes } from './basic-shapes';
-
-export default basicShapes.create;
-```
-
-### Interactive Elements
-
-**Example Object** (`examples/interactive-button.ts`):
-```typescript
-export const interactiveButton = {
-    title: 'Interactive Button',
-    description: 'Clickable button with hover effects',
-    create: (scene: Phaser.Scene) => {
-        const button = scene.add.rectangle(400, 300, 200, 60, 0x4CAF50);
-        button.setInteractive();
-        
-        const buttonText = scene.add.text(400, 300, 'Click Me!', {
-            fontSize: '24px',
-            color: '#ffffff'
-        }).setOrigin(0.5);
-        
-        button.on('pointerover', () => button.setFillStyle(0x45a049));
-        button.on('pointerout', () => button.setFillStyle(0x4CAF50));
-        button.on('pointerdown', () => {
-            buttonText.setText('Clicked!');
-            scene.time.delayedCall(1000, () => buttonText.setText('Click Me!'));
-        });
-    }
+// Available icons
+window.iconUris = {
+    'icon-16': '/icons/icon-16.png',
+    'icon-32': '/icons/icon-32.png', 
+    'icon-64': '/icons/icon-64.png',
+    'icon-128': '/icons/icon-128.png'
 };
 ```
 
-### Animations & Tweens
+## Best Practices
 
-**Example Object** (`examples/animated-star.ts`):
+### ✅ Good Example
 ```typescript
-export const animatedStar = {
-    title: 'Animated Star',
-    description: 'Rotating star with scale pulse animation',
+export const GoodExample = {
+    name: 'Clear Description',
     create: (scene: Phaser.Scene) => {
-        const star = scene.add.star(400, 300, 5, 32, 64, 0xffff00);
+        // Simple and clear
+        const circle = scene.add.circle(400, 300, 50, 0x0088ff);
         
-        // Rotation animation
         scene.tweens.add({
-            targets: star,
-            rotation: Math.PI * 2,
-            duration: 2000,
-            repeat: -1
-        });
-        
-        // Scale pulse
-        scene.tweens.add({
-            targets: star,
-            scaleX: 1.2,
-            scaleY: 1.2,
+            targets: circle,
+            scaleX: 1.5,
+            scaleY: 1.5,
             duration: 1000,
             yoyo: true,
             repeat: -1
         });
+        
+        // Add descriptive label
+        scene.add.text(400, 450, 'Pulsing Circle', {
+            fontSize: '16px',
+            color: '#ffffff'
+        }).setOrigin(0.5);
+        
+        return circle;
     }
 };
 ```
 
-## 🎯 Use Cases
-
-- **🔧 Component Development** - Build and test individual GameObjects in isolation
-- **🎬 Animation Prototyping** - Quickly iterate on animations and effects  
-- **🎨 UI Design** - Design game UI elements with immediate visual feedback
-- **👨‍🏫 Teaching & Learning** - Perfect for Phaser 3 tutorials and workshops
-- **📖 Code Documentation** - Visual documentation of your game components
-- **🧪 A/B Testing** - Compare different versions of game elements side-by-side
-- **🎯 Rapid Prototyping** - Quickly test game mechanics and interactions
-
-## ⚙️ Configuration
-
-All settings are available in VSCode settings (`Cmd/Ctrl + ,` → search "phaser viewer"):
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `phaserViewer.canvas.width` | `800` | Canvas width in pixels |
-| `phaserViewer.canvas.height` | `600` | Canvas height in pixels |
-| `phaserViewer.canvas.backgroundColor` | `"#2d2d2d"` | Background color (hex format) |
-| `phaserViewer.canvas.renderer` | `"AUTO"` | Renderer type (AUTO/WEBGL/CANVAS) |
-
-## 🐛 Troubleshooting
-
-### Extension Not Visible
-- Ensure you have a workspace folder open
-- Check that the extension is enabled in Extensions panel
-- Try reloading VSCode (`Ctrl/Cmd + Shift + P` → "Developer: Reload Window")
-
-### Demos Not Loading
-- Verify file naming: `*.demo.ts` and corresponding `.ts` files
-- Check TypeScript syntax in your demo files
-- Ensure demo files properly import and export the create function
-- Look for errors in VSCode Developer Tools (`Help` → `Toggle Developer Tools`)
-
-### Preview Not Working
-- Ensure your demo file exports a default function
-- Verify the example object has a `create` function
-- Check browser console for JavaScript errors
-- Try different renderer settings if you see rendering issues
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-### Development Setup
-```bash
-git clone https://github.com/your-username/phaser-viewer.git
-cd phaser-viewer
-npm install
-npm run compile
+### ❌ Avoid
+```typescript
+export const BadExample = {
+    name: 'Bad',
+    create: (scene: Phaser.Scene) => {
+        // Too complex, no explanation
+        // Many external dependencies
+        // No error handling
+    }
+};
 ```
 
-Press `F5` in VSCode to launch the extension in debug mode.
+## License
 
-### Creating Screenshots
-Manual screenshots are needed for documentation. See [images/demo-preview.md](images/demo-preview.md) for detailed instructions on capturing the extension in action.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- [Phaser 3](https://phaser.io/) - Amazing 2D game framework that powers the preview environment
-- [Storybook](https://storybook.js.org/) - Inspiration for the component-driven development approach
-- [VSCode Extension API](https://code.visualstudio.com/api) - Powerful and flexible extension framework
-
-## 🏆 Features Roadmap
-
-- [ ] **Asset Loading Support** - Preview sprites, atlases, and other game assets
-- [ ] **Multiple Scene Support** - Switch between different Phaser scenes
-- [ ] **Export Functionality** - Export demos as standalone HTML files
-- [ ] **Theme Support** - Light/dark themes for the preview canvas
-- [ ] **Collaboration Features** - Share demo links with team members
-- [ ] **Performance Profiling** - Built-in performance analysis tools
-
----
-
-**Ready to revolutionize your Phaser 3 development workflow?** 🎮✨
-
-[⭐ Star us on GitHub](https://github.com/your-username/phaser-viewer) | [📝 Report Issues](https://github.com/your-username/phaser-viewer/issues) | [💡 Request Features](https://github.com/your-username/phaser-viewer/discussions)
+MIT
