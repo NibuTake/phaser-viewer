@@ -17,10 +17,7 @@
   </p>
   
   <p>
-    <a href="#quick-start">Quick Start</a> •
-    <a href="#features">Features</a> •
-    <a href="#testing-your-components">Testing</a> •
-    <a href="#commands">Commands</a>
+    A lightweight Storybook alternative for Phaser 3 game components
   </p>
 </div>
 

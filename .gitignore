@@ -15,6 +15,9 @@ dist-ssr
 # Package files
 *.tgz
 
+# Test coverage
+coverage/
+
 # AI tools cache
 .serena/
 
