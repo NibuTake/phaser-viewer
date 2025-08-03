@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { spawn } from 'child_process'
-import { writeFileSync, unlinkSync, existsSync, mkdirSync, rmSync } from 'fs'
+import { writeFileSync, existsSync, mkdirSync, rmSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 

@@ -13,17 +13,20 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/NibuTake/phaser-viewer.git"
+    "url": "git+https://github.com/NibuTake/phaser-viewer.git"
   },
   "homepage": "https://github.com/NibuTake/phaser-viewer",
   "bugs": {
     "url": "https://github.com/NibuTake/phaser-viewer/issues"
   },
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "phaser-viewer": "./bin/phaser-viewer.js"
+    "phaser-viewer": "bin/phaser-viewer.js"
   },
   "exports": {
     ".": {
@@ -40,7 +43,6 @@
   "files": [
     "dist",
     "bin",
-    "user-template",
     "README.md"
   ],
   "scripts": {

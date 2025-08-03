@@ -49,7 +49,7 @@ export async function loadStoryGroupsFromModules(userStoryModules: Record<string
               
               console.log(`🎮 Story ${key} play function type:`, typeof originalPlay);
               
-              let playFunction = typeof originalPlay === 'function' ? originalPlay : undefined;
+              const playFunction: ((scene: Phaser.Scene, component?: unknown) => void | Promise<void>) | undefined = typeof originalPlay === 'function' ? originalPlay : undefined;
               
               stories.push({
                 name: (storyObj.name as string) || key,

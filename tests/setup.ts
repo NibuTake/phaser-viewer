@@ -22,7 +22,7 @@ global.Phaser = {
   },
   Game: vi.fn(),
   AUTO: 'AUTO'
-} as any
+} as unknown as typeof Phaser
 
 // Mock window.iconUris
 Object.defineProperty(window, 'iconUris', {
