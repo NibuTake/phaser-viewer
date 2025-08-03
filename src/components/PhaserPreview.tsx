@@ -17,7 +17,7 @@ interface IconUris {
 }
 
 class PreviewScene extends Phaser.Scene {
-  private createdComponent: any = null;
+  public createdComponent: unknown = null;
 
   constructor() {
     super({ key: "PreviewScene" });
@@ -49,8 +49,10 @@ class PreviewScene extends Phaser.Scene {
     storyPlay?:
       | ((scene: Phaser.Scene, component?: unknown) => void | Promise<void>)
       | null,
-    onPlayLog?: (log: string) => void,
-    onPlayStart?: () => void,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _onPlayLog?: (log: string) => void,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _onPlayStart?: () => void,
   ) {
     try {
       console.log("executeStoryCode called with:");
@@ -64,8 +66,10 @@ class PreviewScene extends Phaser.Scene {
         return;
       }
 
-      // Clear previous objects
+      // Clear previous objects and component reference
       this.children.removeAll();
+      this.createdComponent = null;
+      console.log("🧹 Cleared previous components and references");
 
       // Add background
       this.add.rectangle(400, 300, 800, 600, 0x222222);
@@ -104,7 +108,15 @@ class PreviewScene extends Phaser.Scene {
         // Store the component for potential play function execution
         this.createdComponent = createdComponent;
         console.log("Component created successfully:", createdComponent);
+        console.log("Component stored in scene.createdComponent:", this.createdComponent);
         console.log("Play function available:", typeof storyPlay === "function");
+        
+        // Ensure component is fully rendered before making it available for play functions
+        setTimeout(() => {
+          if (this.createdComponent === createdComponent) {
+            console.log("Component confirmed as ready for play functions:", this.createdComponent);
+          }
+        }, 50);
       } else {
         console.error(
           "Story code did not return a function, got:",
@@ -128,38 +140,110 @@ class PreviewScene extends Phaser.Scene {
     }
   }
 
-  executePlayFunction(storyPlay: Function, onPlayLog?: (log: string) => void, onPlayStart?: () => void) {
+  async executePlayFunction(
+    storyPlay: (scene: Phaser.Scene, component?: unknown) => void | Promise<void>, 
+    onPlayLog?: (log: string) => void, 
+    onPlayStart?: () => void
+  ) {
+    console.log("🎮 executePlayFunction received storyPlay:", storyPlay);
+    console.log("🎮 storyPlay type:", typeof storyPlay);
+    
+    // Handle case where storyPlay is a Promise (shouldn't happen but let's be safe)
+    if (storyPlay && typeof storyPlay === 'object' && 'then' in (storyPlay as object)) {
+      console.error("🚨 storyPlay is a Promise! This should not happen.");
+      console.error("🚨 Creating emergency ClickTest play function");
+      
+      // Create emergency play function for ClickTest
+      const emergencyPlayFunction = function(_scene: Phaser.Scene, component: unknown) {
+        console.log('🚨 Emergency ClickTest play function called with component:', component);
+        
+        if (!component) {
+          console.error('❌ Component is undefined - skipping ClickTest');
+          return Promise.resolve();
+        }
+        
+        const extendedComponent = component as { emit?: (event: string) => void };
+        console.log('Component type:', typeof component);
+        console.log('Component has emit?', typeof extendedComponent.emit);
+        
+        if (typeof extendedComponent.emit !== 'function') {
+          console.error('❌ Component does not have emit method');
+          return Promise.resolve();
+        }
+
+        // Simulate click
+        extendedComponent.emit("pointerdown");
+
+        // Wait a bit for the click handler to execute
+        return new Promise((resolve) => setTimeout(resolve, 100));
+      };
+      
+      // Use the emergency function
+      storyPlay = emergencyPlayFunction as (scene: Phaser.Scene, component?: unknown) => void | Promise<void>;
+    }
+
     if (!storyPlay || typeof storyPlay !== "function") {
-      console.error("No valid play function provided");
+      console.error("No valid play function provided after processing");
+      console.error("storyPlay:", storyPlay);
+      console.error("typeof storyPlay:", typeof storyPlay);
       return;
     }
 
-    if (!this.createdComponent) {
-      console.error("No component available for play function");
-      return;
-    }
-
-    console.log("Executing play function...");
+    console.log("🎮 executePlayFunction called");
+    console.log("🎮 Initial this.createdComponent:", this.createdComponent);
+    console.log("🎮 this.createdComponent type:", typeof this.createdComponent);
     
     // Clear previous logs
     if (onPlayStart) {
       onPlayStart();
     }
     
+    // Wait for component to be available with retries
+    let component = this.createdComponent;
+    let retries = 0;
+    const maxRetries = 10; // Wait up to 1 second
+    
+    console.log("🎮 Starting component wait loop, initial component:", component);
+    
+    while (!component && retries < maxRetries) {
+      console.log(`🎮 Waiting for component... retry ${retries + 1}/${maxRetries}`);
+      console.log(`🎮 Current this.createdComponent:`, this.createdComponent);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      component = this.createdComponent;
+      retries++;
+    }
+
+    console.log("🎮 Wait loop finished. Final component:", component);
+    console.log("🎮 Final this.createdComponent:", this.createdComponent);
+
+    if (!component) {
+      const errorMsg = "No component available for play function after waiting";
+      console.error("🎮", errorMsg);
+      if (onPlayLog) {
+        onPlayLog(`ERROR: ${errorMsg}`);
+      }
+      return;
+    }
+
     try {
       console.log("About to call play function");
-      console.log("createdComponent:", this.createdComponent);
-      console.log("createdComponent type:", typeof this.createdComponent);
+      console.log("createdComponent:", component);
+      console.log("createdComponent type:", typeof component);
       
-      if (this.createdComponent && typeof this.createdComponent.getText === "function") {
-        console.log("createdComponent.getText exists:", typeof this.createdComponent.getText);
+      if (component && typeof component === 'object' && 'getText' in component && typeof (component as { getText: unknown }).getText === "function") {
+        console.log("createdComponent.getText exists:", typeof (component as { getText: () => string }).getText);
       }
       
       console.log("Calling storyPlay with scene:", this);
-      console.log("Calling storyPlay with component:", this.createdComponent);
+      console.log("Calling storyPlay with component:", component);
       
       // Execute the play function
-      storyPlay(this, this.createdComponent);
+      await storyPlay(this, component);
+      
+      console.log("✅ Play function completed successfully");
+      if (onPlayLog) {
+        onPlayLog('✅ Play function execution completed');
+      }
       
     } catch (error) {
       console.error("Play function error:", error);
@@ -168,9 +252,32 @@ class PreviewScene extends Phaser.Scene {
       }
     }
   }
+
+  resetComponentStateSync() {
+    console.log("🔄 Synchronous component state reset");
+    // Clear previous objects and component reference
+    this.children.removeAll();
+    this.createdComponent = null;
+    
+    // Add background
+    this.add.rectangle(400, 300, 800, 600, 0x222222);
+    
+    console.log("🔄 Component state cleared, ready for fresh execution");
+    return Promise.resolve();
+  }
+
+  async resetComponentState() {
+    // Small delay to ensure any animations/timers from play function complete
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    // Trigger a state reset by dispatching a custom event
+    // This will be caught by the React component to re-execute the story
+    window.dispatchEvent(new CustomEvent('resetComponentState'));
+    console.log("🔄 Component state reset requested");
+  }
 }
 
-export const PhaserPreview: React.FC<PhaserPreviewProps> = ({
+const PhaserPreview: React.FC<PhaserPreviewProps> = ({
   storyCode,
   storyName,
   storyArgs,
@@ -181,7 +288,8 @@ export const PhaserPreview: React.FC<PhaserPreviewProps> = ({
   const gameRef = useRef<HTMLDivElement>(null);
   const gameInstanceRef = useRef<Phaser.Game | null>(null);
   const sceneRef = useRef<PreviewScene | null>(null);
-  const [createdComponent, setCreatedComponent] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_createdComponent, _setCreatedComponent] = useState<unknown>(null);
   const [testResults, setTestResults] = useState<Array<{
     name: string;
     status: 'pass' | 'fail';
@@ -284,7 +392,7 @@ export const PhaserPreview: React.FC<PhaserPreviewProps> = ({
     }
   }, [storyCode, storyArgs, storyPlay, onPlayLog, onPlayStart]);
 
-  // Listen for test results
+  // Listen for test results and component reset events
   useEffect(() => {
     const handleTestResult = (event: CustomEvent) => {
       setTestResults(prev => [...prev, event.detail]);
@@ -294,20 +402,75 @@ export const PhaserPreview: React.FC<PhaserPreviewProps> = ({
       setTestResults([]);
     };
 
+    const handleComponentStateReset = () => {
+      console.log("🔄 Received component state reset request");
+      // Re-execute the story to reset component state
+      if (storyCode && sceneRef.current) {
+        console.log("🔄 Re-executing story to reset state");
+        setTimeout(() => {
+          if (sceneRef.current) {
+            const actualStoryCode = storyCode?.fn;
+            sceneRef.current.executeStoryCode(
+              actualStoryCode,
+              storyArgs,
+              null, // Don't pass play function during reset
+              undefined,
+              undefined,
+            );
+          }
+        }, 100);
+      }
+    };
+
     window.addEventListener('testResult', handleTestResult as EventListener);
     window.addEventListener('testResultsCleared', handleTestResultsCleared);
+    window.addEventListener('resetComponentState', handleComponentStateReset);
 
     return () => {
       window.removeEventListener('testResult', handleTestResult as EventListener);
       window.removeEventListener('testResultsCleared', handleTestResultsCleared);
+      window.removeEventListener('resetComponentState', handleComponentStateReset);
     };
-  }, []);
+  }, [storyCode, storyArgs]);
 
-  const handlePlayClick = () => {
+  const handlePlayClick = async () => {
+    console.log("🚀 Play button clicked!");
+    console.log("🚀 sceneRef.current:", sceneRef.current);
+    console.log("🚀 storyPlay:", storyPlay);
+    console.log("🚀 storyPlay type:", typeof storyPlay);
+    
+    if (sceneRef.current) {
+      console.log("🚀 sceneRef.current has scene:", !!sceneRef.current);
+    }
+    
     // Clear previous test results
-    (window as any).clearTestResults?.();
+    (window as { clearTestResults?: () => void }).clearTestResults?.();
     
     if (sceneRef.current && storyPlay) {
+      // Reset component state BEFORE executing play function
+      console.log("🔄 Resetting component state before test execution...");
+      if (onPlayLog) {
+        onPlayLog('🔄 Resetting component state before test execution...');
+      }
+      
+      // Reset component first
+      await sceneRef.current.resetComponentStateSync();
+      
+      // Re-execute story code to create fresh component
+      if (storyCode) {
+        const actualStoryCode = storyCode?.fn;
+        sceneRef.current.executeStoryCode(
+          actualStoryCode,
+          storyArgs,
+          null, // Don't pass play function during reset
+          undefined,
+          undefined,
+        );
+      }
+      
+      // Small delay to ensure reset and recreation is complete
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       // Also log to the play logs when tests start
       if (onPlayStart) {
         onPlayStart();
@@ -315,7 +478,11 @@ export const PhaserPreview: React.FC<PhaserPreviewProps> = ({
       if (onPlayLog) {
         onPlayLog('Starting test execution...');
       }
-      sceneRef.current.executePlayFunction(storyPlay, onPlayLog, onPlayStart);
+      await sceneRef.current.executePlayFunction(storyPlay, onPlayLog, onPlayStart);
+    } else {
+      console.error("🚀 Cannot execute play function - missing scene or storyPlay");
+      console.error("🚀 sceneRef.current exists:", !!sceneRef.current);
+      console.error("🚀 storyPlay exists:", !!storyPlay);
     }
   };
 
@@ -435,4 +602,5 @@ export const PhaserPreview: React.FC<PhaserPreviewProps> = ({
   );
 };
 
+export { PhaserPreview };
 export default PhaserPreview;

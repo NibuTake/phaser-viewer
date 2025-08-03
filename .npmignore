@@ -1,0 +1,32 @@
+# Source files
+src/
+examples/
+*.demo.ts
+
+# Development files
+.vscode/
+.idea/
+*.log
+.DS_Store
+
+# Build artifacts
+node_modules/
+*.tgz
+
+# AI tools
+.serena/
+.claude/
+CLAUDE.md
+.mcp.json
+
+# TypeScript configs (keep only lib config)
+tsconfig.app.json
+tsconfig.node.json
+
+# Development configs
+eslint.config.js
+vite.config.ts
+
+# Git files
+.git/
+.gitignore

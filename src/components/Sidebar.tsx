@@ -44,7 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <div className="sidebar">
       <div className="sidebar-header">
-        <h1>Phaser Storybook</h1>
+        <h1>Phaser Viewer</h1>
         <p>Interactive Phaser 3 Component Library</p>
       </div>
 

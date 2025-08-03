@@ -1,24 +1,27 @@
 import { StoryGroup } from "../components/Sidebar";
 
-// Dynamically load all .demo.ts files
-export async function loadStoryGroups(): Promise<StoryGroup[]> {
-  console.log("Loading story groups from .demo.ts files...");
+// Load story groups from user-provided modules (Storybook approach)
+export async function loadStoryGroupsFromModules(userStoryModules: Record<string, unknown>): Promise<StoryGroup[]> {
+  console.log("🔄 Loading story groups from provided modules...");
 
   try {
-    // Import all .demo.ts files dynamically from examples folder
-    const storyModules = import.meta.glob("../../examples/**/*.demo.ts", { eager: true });
+    if (Object.keys(userStoryModules).length === 0) {
+      console.warn("⚠️ No story modules provided");
+      return [];
+    }
+
     const storyGroups: StoryGroup[] = [];
 
-    for (const [path, module] of Object.entries(storyModules)) {
+    for (const [path, module] of Object.entries(userStoryModules)) {
       try {
-        console.log("Loading story module:", path);
+        console.log("📖 Loading story module:", path);
         const moduleObj = module as Record<string, unknown>;
 
         if (moduleObj.default && typeof moduleObj.default === 'object') {
           const meta = moduleObj.default as Record<string, unknown>;
           const stories = [];
 
-          // Extract all exported stories (除了default export)
+          // Extract all exported stories (excluding default export)
           for (const [key, story] of Object.entries(moduleObj)) {
             if (key !== "default" && typeof story === "object" && story !== null) {
               const storyObj = story as Record<string, unknown>;
@@ -35,16 +38,24 @@ export async function loadStoryGroups(): Promise<StoryGroup[]> {
 
               // Wrap the create function to prevent accidental execution during React rendering
               const wrappedCreateFunction = (...args: unknown[]) => {
-                console.log(`Executing story: ${key}`);
+                console.log(`🎬 Executing story: ${key}`);
                 return createFunction(...args);
               };
 
-              console.log(`Story ${key} args:`, storyObj.args);
+              console.log(`📝 Story ${key} args:`, storyObj.args);
+              
+              // Handle play function properly
+              const originalPlay = storyObj.play as ((scene: Phaser.Scene, component?: unknown) => void | Promise<void>) | undefined;
+              
+              console.log(`🎮 Story ${key} play function type:`, typeof originalPlay);
+              
+              let playFunction = typeof originalPlay === 'function' ? originalPlay : undefined;
+              
               stories.push({
                 name: (storyObj.name as string) || key,
                 create: wrappedCreateFunction,
                 args: storyObj.args,
-                play: storyObj.play as ((scene: Phaser.Scene, component?: unknown) => void | Promise<void>) | undefined,
+                play: playFunction,
               });
             }
           }
@@ -54,9 +65,9 @@ export async function loadStoryGroups(): Promise<StoryGroup[]> {
             let existingGroup = storyGroups.find((g) => g.title === (meta.title as string));
             if (!existingGroup) {
               existingGroup = {
-                title: (meta.title as string) || "Untitled",
-                description: (meta.description as string) || "",
-                tags: (meta.tags as string[]) || [],
+                title: (meta.title as string) || "User Components",
+                description: (meta.description as string) || "User defined components",
+                tags: (meta.tags as string[]) || ["user"],
                 stories: [],
               };
               storyGroups.push(existingGroup);
@@ -67,17 +78,22 @@ export async function loadStoryGroups(): Promise<StoryGroup[]> {
           }
         }
       } catch (error) {
-        console.error(`Error loading story module ${path}:`, error);
+        console.error(`❌ Error loading story module ${path}:`, error);
       }
     }
 
-    console.log("Loaded story groups:", storyGroups);
+    console.log("🎉 Loaded story groups:", storyGroups);
     return storyGroups;
   } catch (error) {
-    console.error("Error loading stories:", error);
-    // Return empty array if loading fails
+    console.error("❌ Error loading stories:", error);
     return [];
   }
+}
+
+// Legacy function - no longer used, kept for backward compatibility
+export async function loadStoryGroups(): Promise<StoryGroup[]> {
+  console.warn("⚠️ loadStoryGroups() is deprecated. Use loadStoryGroupsFromModules() instead.");
+  return [];
 }
 
 // Make components available globally for the demos
@@ -93,29 +109,19 @@ export function setupGlobalComponents() {
       message: string;
     }> = [];
 
-    (window as any).testResults = testResults;
+    (window as { testResults?: typeof testResults }).testResults = testResults;
     
-    // Add Storybook-style assert functions for testing
+    // Add Storybook-style assert functions for testing (logs only, no counting)
     (
       window as { assert?: (condition: boolean, message: string) => void }
     ).assert = (condition: boolean, message: string) => {
-      const result = {
-        name: 'assert',
-        status: condition ? 'pass' as const : 'fail' as const,
-        message: message
-      };
-      testResults.push(result);
-      
       if (condition) {
         console.log('✅ PASS:', message);
       } else {
         console.error('❌ FAIL:', message);
       }
       
-      // Dispatch custom event to notify UI
-      window.dispatchEvent(new CustomEvent('testResult', { detail: result }));
-      
-      // Also dispatch to play logs
+      // Only dispatch to play logs, not to test result counter
       window.dispatchEvent(new CustomEvent('playLog', { 
         detail: condition ? `✅ PASS: ${message}` : `❌ FAIL: ${message}`
       }));
@@ -131,12 +137,6 @@ export function setupGlobalComponents() {
       }
     ).assertEquals = (actual: unknown, expected: unknown, message: string) => {
       const condition = actual === expected;
-      const result = {
-        name: 'assertEquals',
-        status: condition ? 'pass' as const : 'fail' as const,
-        message: condition ? message : `${message}. Expected: ${expected}, Actual: ${actual}`
-      };
-      testResults.push(result);
       
       if (condition) {
         console.log('✅ PASS:', message);
@@ -144,19 +144,19 @@ export function setupGlobalComponents() {
         console.error('❌ FAIL:', `${message}. Expected: ${expected}, Actual: ${actual}`);
       }
       
-      // Dispatch custom event to notify UI
-      window.dispatchEvent(new CustomEvent('testResult', { detail: result }));
-      
-      // Also dispatch to play logs
+      // Only dispatch to play logs, not to test result counter
       window.dispatchEvent(new CustomEvent('playLog', { 
         detail: condition ? `✅ PASS: ${message}` : `❌ FAIL: ${message}. Expected: ${expected}, Actual: ${actual}`
       }));
     };
     
     // Function to clear test results
-    (window as any).clearTestResults = () => {
+    (window as { clearTestResults?: () => void }).clearTestResults = () => {
       testResults.length = 0;
       window.dispatchEvent(new CustomEvent('testResultsCleared'));
     };
+
+    // Note: Modern Storybook-style expect API is now imported directly in play functions
+    // No need for global window.expect anymore
   }
 }

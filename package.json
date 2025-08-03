@@ -1,15 +1,46 @@
 {
   "name": "phaser-viewer",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "A Storybook-like development environment for Phaser 3 components with interactive testing",
-  "keywords": ["phaser", "storybook", "testing", "game-development", "ui-components"],
-  "author": "Your Name",
+  "keywords": [
+    "phaser",
+    "storybook",
+    "testing",
+    "game-development",
+    "ui-components"
+  ],
+  "author": "NibuTake <takeshi715tech@gmail.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NibuTake/phaser-viewer.git"
+  },
+  "homepage": "https://github.com/NibuTake/phaser-viewer",
+  "bugs": {
+    "url": "https://github.com/NibuTake/phaser-viewer/issues"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "phaser-viewer": "./bin/phaser-viewer.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./utils/storybookExpect": {
+      "types": "./dist/utils/storybookExpect.d.ts",
+      "import": "./dist/utils/storybookExpect.js",
+      "require": "./dist/utils/storybookExpect.js"
+    }
+  },
   "files": [
     "dist",
+    "bin",
+    "user-template",
     "README.md"
   ],
   "scripts": {
@@ -23,21 +54,25 @@
   "dependencies": {
     "@types/node": "^24.1.0",
     "phaser": "^3.90.0",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "styled-jsx": "^5.1.7"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "styled-jsx": "^5.1.7",
+    "vite": "^7.0.4",
+    "@vitejs/plugin-react": "^4.6.0",
+    "glob": "^11.0.0",
+    "tsx": "^4.19.2",
+    "esbuild": "^0.24.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.30.1",
-    "@types/react": "^19.1.8",
-    "@types/react-dom": "^19.1.6",
-    "@vitejs/plugin-react": "^4.6.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
     "eslint": "^9.30.1",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.3.0",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.35.1",
-    "vite": "^7.0.4"
+    "vite-plugin-dts": "^4.5.4"
   }
 }

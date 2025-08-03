@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Package files
+*.tgz
+
+# AI tools cache
+.serena/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

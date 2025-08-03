@@ -9,6 +9,7 @@ export default defineConfig(({ mode }) => {
     return {
       plugins: [react()],
       build: {
+        emptyOutDir: false, // Don't empty dist directory to preserve TypeScript declarations
         lib: {
           entry: resolve(__dirname, 'src/index.ts'),
           name: 'PhaserViewer',
