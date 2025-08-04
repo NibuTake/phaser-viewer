@@ -61,6 +61,10 @@ export async function loadStoryGroupsFromModules(userStoryModules: Record<string
           }
 
           if (stories.length > 0) {
+            // Extract preloadScene class from meta
+            const preloadSceneClass = meta.preloadScene as (new () => Phaser.Scene) | undefined;
+            console.log(`⚡ Meta preloadScene class type:`, typeof preloadSceneClass);
+            
             // Check if group already exists
             let existingGroup = storyGroups.find((g) => g.title === (meta.title as string));
             if (!existingGroup) {
@@ -69,6 +73,7 @@ export async function loadStoryGroupsFromModules(userStoryModules: Record<string
                 description: (meta.description as string) || "User defined components",
                 tags: (meta.tags as string[]) || ["user"],
                 stories: [],
+                preloadScene: preloadSceneClass,
               };
               storyGroups.push(existingGroup);
             }

@@ -1,10 +1,11 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import * as Phaser from "phaser";
 
 interface PhaserPreviewProps {
   storyCode: { fn: (scene: Phaser.Scene, args?: unknown) => unknown } | null;
   storyName?: string;
   storyArgs?: unknown;
+  preloadScene?: (new () => UserPreloadScene) | null;
   storyPlay?:
     | ((scene: Phaser.Scene, component?: unknown) => void | Promise<void>)
     | null;
@@ -16,15 +17,95 @@ interface IconUris {
   [key: string]: string;
 }
 
-class PreviewScene extends Phaser.Scene {
-  public createdComponent: unknown = null;
+// Interface for user-defined preload scenes that extends Phaser.Scene
+interface UserPreloadScene extends Phaser.Scene {
+  preload?: () => void;
+}
+
+// Base class for wrapping user PreloadScene classes
+class UserPreloadSceneWrapper extends Phaser.Scene {
+  private userPreloadScene: UserPreloadScene | null = null;
+  private onPreloadComplete: (() => void) | null = null;
+  private UserPreloadSceneClass: (new () => UserPreloadScene) | null = null;
 
   constructor() {
-    super({ key: "PreviewScene" });
+    super({ key: "UserPreloadSceneWrapper" });
+  }
+
+  setUserPreloadSceneClass(PreloadSceneClass: new () => UserPreloadScene) {
+    this.UserPreloadSceneClass = PreloadSceneClass;
+  }
+
+  setOnPreloadComplete(callback: () => void) {
+    this.onPreloadComplete = callback;
   }
 
   preload() {
-    // Add any asset loading here
+    console.log("⚡ UserPreloadSceneWrapper: Starting asset loading...");
+    
+    if (this.UserPreloadSceneClass) {
+      console.log("⚡ Creating user PreloadScene instance...");
+      this.userPreloadScene = new this.UserPreloadSceneClass();
+      
+      // Copy essential properties to user scene so it can access Phaser systems
+      if (this.userPreloadScene) {
+        // Cast to any only for property assignment of Phaser internal systems
+        // This is necessary because TypeScript doesn't know about the dynamic property assignment
+        Object.assign(this.userPreloadScene, {
+          load: this.load,
+          scene: this.scene,
+          game: this.game,
+          registry: this.registry,
+          events: this.events
+        });
+      }
+      
+      // Execute user scene's preload method with proper context
+      if (this.userPreloadScene && typeof this.userPreloadScene.preload === 'function') {
+        console.log("⚡ Executing user PreloadScene.preload()...");
+        try {
+          this.userPreloadScene.preload.call(this.userPreloadScene);
+        } catch (error) {
+          console.error("⚡ Error executing user PreloadScene.preload():", error);
+        }
+      }
+    }
+
+    // Listen for load completion
+    this.load.on('complete', () => {
+      console.log("⚡ UserPreloadSceneWrapper: Asset loading completed");
+      if (this.onPreloadComplete) {
+        this.onPreloadComplete();
+      }
+    });
+
+    // If no assets to load, trigger completion immediately
+    if (!this.load.isLoading()) {
+      console.log("⚡ UserPreloadSceneWrapper: No assets to load, triggering immediate completion");
+      setTimeout(() => {
+        if (this.onPreloadComplete) {
+          this.onPreloadComplete();
+        }
+      }, 100);
+    }
+  }
+
+  create() {
+    // UserPreloadSceneWrapper doesn't need visual elements
+    console.log("⚡ UserPreloadSceneWrapper: Created (no visual elements needed)");
+  }
+}
+
+// ViewerScene: コンポーネント表示用シーン  
+class ViewerScene extends Phaser.Scene {
+  public createdComponent: unknown = null;
+
+  constructor() {
+    super({ key: "ViewerScene" });
+  }
+
+  preload() {
+    // ViewerScene doesn't load assets - they're already loaded by PreloadScene
   }
 
   create() {
@@ -43,7 +124,7 @@ class PreviewScene extends Phaser.Scene {
       .setOrigin(0.5);
   }
 
-  executeStoryCode(
+  async executeStoryCode(
     storyCode: string | ((scene: Phaser.Scene, args?: unknown) => unknown),
     storyArgs?: unknown,
     storyPlay?:
@@ -55,7 +136,7 @@ class PreviewScene extends Phaser.Scene {
     _onPlayStart?: () => void,
   ) {
     try {
-      console.log("executeStoryCode called with:");
+      console.log("🎬 ViewerScene: executeStoryCode called with:");
       console.log("- scene:", this);
       console.log("- storyCode type:", typeof storyCode);
       console.log("- storyArgs:", storyArgs);
@@ -69,10 +150,12 @@ class PreviewScene extends Phaser.Scene {
       // Clear previous objects and component reference
       this.children.removeAll();
       this.createdComponent = null;
-      console.log("🧹 Cleared previous components and references");
+      console.log("🧹 ViewerScene: Cleared previous components and references");
 
       // Add background
       this.add.rectangle(400, 300, 800, 600, 0x222222);
+
+      // Note: Assets are already loaded by PreloadScene, so we can directly use them
 
       let storyFunction: (scene: Phaser.Scene) => unknown;
 
@@ -281,13 +364,15 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
   storyCode,
   storyName,
   storyArgs,
+  preloadScene,
   storyPlay,
   onPlayLog,
   onPlayStart,
 }) => {
   const gameRef = useRef<HTMLDivElement>(null);
   const gameInstanceRef = useRef<Phaser.Game | null>(null);
-  const sceneRef = useRef<PreviewScene | null>(null);
+  const userPreloadSceneWrapperRef = useRef<UserPreloadSceneWrapper | null>(null);
+  const viewerSceneRef = useRef<ViewerScene | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_createdComponent, _setCreatedComponent] = useState<unknown>(null);
   const [testResults, setTestResults] = useState<Array<{
@@ -310,14 +395,14 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
     // Make icons globally available (for compatibility with existing demos)
     (window as { iconUris?: IconUris }).iconUris = iconUris;
 
-    // Create Phaser game
+    // Create Phaser game with both PreloadScene and ViewerScene
     const config: Phaser.Types.Core.GameConfig = {
       type: Phaser.AUTO,
       width: 800,
       height: 600,
       parent: gameRef.current,
       backgroundColor: "#222222",
-      scene: PreviewScene,
+      scene: [UserPreloadSceneWrapper, ViewerScene],
       audio: {
         disableWebAudio: true, // オーディオエラーを回避
         noAudio: true,
@@ -333,12 +418,20 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
 
     gameInstanceRef.current = new Phaser.Game(config);
 
-    // Get scene reference
+    // Get scene references
     gameInstanceRef.current.events.once("ready", () => {
-      sceneRef.current = gameInstanceRef.current?.scene.getScene(
-        "PreviewScene",
-      ) as PreviewScene;
-      console.log("Phaser game ready, scene:", sceneRef.current);
+      userPreloadSceneWrapperRef.current = gameInstanceRef.current?.scene.getScene(
+        "UserPreloadSceneWrapper",
+      ) as UserPreloadSceneWrapper;
+      viewerSceneRef.current = gameInstanceRef.current?.scene.getScene(
+        "ViewerScene",
+      ) as ViewerScene;
+      console.log("🎮 Phaser game ready");
+      console.log("- UserPreloadSceneWrapper:", userPreloadSceneWrapperRef.current);
+      console.log("- ViewerScene:", viewerSceneRef.current);
+      
+      // Start with ViewerScene active by default
+      gameInstanceRef.current?.scene.start("ViewerScene");
     });
 
     return () => {
@@ -349,48 +442,75 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
     };
   }, []);
 
+  // Story execution with UserPreloadSceneWrapper → ViewerScene flow
+  const executeStoryWithPreload = useCallback(async () => {
+    if (!storyCode || !userPreloadSceneWrapperRef.current || !viewerSceneRef.current) {
+      console.log("⚠️ Cannot execute story - missing storyCode or scene references");
+      return;
+    }
+
+    console.log("🚀 Starting UserPreloadSceneWrapper → ViewerScene flow...");
+
+    try {
+      // Step 1: Configure UserPreloadSceneWrapper with user PreloadScene class
+      if (preloadScene) {
+        console.log("⚡ Setting user PreloadScene class to wrapper");
+        userPreloadSceneWrapperRef.current.setUserPreloadSceneClass(preloadScene);
+      }
+
+      // Step 2: Set completion callback to transition to ViewerScene
+      userPreloadSceneWrapperRef.current.setOnPreloadComplete(() => {
+        console.log("🎬 Preload completed, transitioning to ViewerScene...");
+        
+        setTimeout(() => {
+          if (gameInstanceRef.current && viewerSceneRef.current) {
+            // Stop UserPreloadSceneWrapper and start ViewerScene
+            gameInstanceRef.current.scene.stop("UserPreloadSceneWrapper");
+            gameInstanceRef.current.scene.start("ViewerScene");
+            
+            // Execute story code in ViewerScene
+            setTimeout(() => {
+              if (viewerSceneRef.current && storyCode) {
+                const actualStoryCode = storyCode.fn;
+                viewerSceneRef.current.executeStoryCode(
+                  actualStoryCode,
+                  storyArgs,
+                  storyPlay,
+                  onPlayLog,
+                  onPlayStart,
+                );
+              }
+            }, 100);
+          }
+        }, 100);
+      });
+
+      // Step 3: Start UserPreloadSceneWrapper
+      if (gameInstanceRef.current) {
+        console.log("⚡ Starting UserPreloadSceneWrapper for asset loading...");
+        gameInstanceRef.current.scene.stop("ViewerScene");
+        gameInstanceRef.current.scene.start("UserPreloadSceneWrapper");
+      }
+
+    } catch (error) {
+      console.error("❌ Error in UserPreloadSceneWrapper → ViewerScene flow:", error);
+    }
+  }, [storyCode, storyArgs, storyPlay, preloadScene, onPlayLog, onPlayStart]);
+
   useEffect(() => {
     console.log("PhaserPreview useEffect triggered with:");
     console.log("- storyCode:", storyCode ? "object with fn" : "null");
     console.log("- storyArgs:", storyArgs);
-    console.log("- sceneRef.current:", sceneRef.current);
+    console.log("- userPreloadSceneWrapperRef.current:", userPreloadSceneWrapperRef.current);
+    console.log("- viewerSceneRef.current:", viewerSceneRef.current);
 
-    if (storyCode && sceneRef.current) {
-      // 少し遅延を入れてsceneが完全に初期化されるのを待つ
+    if (storyCode && userPreloadSceneWrapperRef.current && viewerSceneRef.current) {
+      // Use new PreloadScene → ViewerScene flow
       setTimeout(() => {
-        if (sceneRef.current) {
-          console.log("PhaserPreview received storyArgs:", storyArgs);
-          console.log(
-            "About to call executeStoryCode with scene:",
-            sceneRef.current,
-          );
-
-          // Extract actual functions from object wrapper
-          const actualStoryCode = storyCode?.fn;
-
-          console.log("storyPlay before extraction:", storyPlay);
-          console.log("storyPlay type before extraction:", typeof storyPlay);
-
-          // storyPlay is now stored directly as a function reference
-          const actualStoryPlay = storyPlay;
-
-          console.log("actualStoryPlay after extraction:", actualStoryPlay);
-          console.log(
-            "actualStoryPlay type after extraction:",
-            typeof actualStoryPlay,
-          );
-
-          sceneRef.current.executeStoryCode(
-            actualStoryCode,
-            storyArgs,
-            actualStoryPlay,
-            onPlayLog,
-            onPlayStart,
-          );
-        }
+        executeStoryWithPreload();
       }, 100);
     }
-  }, [storyCode, storyArgs, storyPlay, onPlayLog, onPlayStart]);
+  }, [storyCode, storyArgs, storyPlay, preloadScene, onPlayLog, onPlayStart, executeStoryWithPreload]);
 
   // Listen for test results and component reset events
   useEffect(() => {
@@ -404,20 +524,11 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
 
     const handleComponentStateReset = () => {
       console.log("🔄 Received component state reset request");
-      // Re-execute the story to reset component state
-      if (storyCode && sceneRef.current) {
-        console.log("🔄 Re-executing story to reset state");
+      // Re-execute the story to reset component state using new flow
+      if (storyCode && userPreloadSceneWrapperRef.current && viewerSceneRef.current) {
+        console.log("🔄 Re-executing story via PreloadScene → ViewerScene flow");
         setTimeout(() => {
-          if (sceneRef.current) {
-            const actualStoryCode = storyCode?.fn;
-            sceneRef.current.executeStoryCode(
-              actualStoryCode,
-              storyArgs,
-              null, // Don't pass play function during reset
-              undefined,
-              undefined,
-            );
-          }
+          executeStoryWithPreload();
         }, 100);
       }
     };
@@ -431,22 +542,22 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
       window.removeEventListener('testResultsCleared', handleTestResultsCleared);
       window.removeEventListener('resetComponentState', handleComponentStateReset);
     };
-  }, [storyCode, storyArgs]);
+  }, [storyCode, storyArgs, preloadScene, executeStoryWithPreload]);
 
   const handlePlayClick = async () => {
     console.log("🚀 Play button clicked!");
-    console.log("🚀 sceneRef.current:", sceneRef.current);
+    console.log("🚀 viewerSceneRef.current:", viewerSceneRef.current);
     console.log("🚀 storyPlay:", storyPlay);
     console.log("🚀 storyPlay type:", typeof storyPlay);
     
-    if (sceneRef.current) {
-      console.log("🚀 sceneRef.current has scene:", !!sceneRef.current);
+    if (viewerSceneRef.current) {
+      console.log("🚀 viewerSceneRef.current has scene:", !!viewerSceneRef.current);
     }
     
     // Clear previous test results
     (window as { clearTestResults?: () => void }).clearTestResults?.();
     
-    if (sceneRef.current && storyPlay) {
+    if (viewerSceneRef.current && storyPlay) {
       // Reset component state BEFORE executing play function
       console.log("🔄 Resetting component state before test execution...");
       if (onPlayLog) {
@@ -454,18 +565,11 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
       }
       
       // Reset component first
-      await sceneRef.current.resetComponentStateSync();
+      await viewerSceneRef.current.resetComponentStateSync();
       
-      // Re-execute story code to create fresh component
+      // Re-execute story via PreloadScene → ViewerScene flow
       if (storyCode) {
-        const actualStoryCode = storyCode?.fn;
-        sceneRef.current.executeStoryCode(
-          actualStoryCode,
-          storyArgs,
-          null, // Don't pass play function during reset
-          undefined,
-          undefined,
-        );
+        await executeStoryWithPreload();
       }
       
       // Small delay to ensure reset and recreation is complete
@@ -478,10 +582,10 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
       if (onPlayLog) {
         onPlayLog('Starting test execution...');
       }
-      await sceneRef.current.executePlayFunction(storyPlay, onPlayLog, onPlayStart);
+      await viewerSceneRef.current.executePlayFunction(storyPlay, onPlayLog, onPlayStart);
     } else {
       console.error("🚀 Cannot execute play function - missing scene or storyPlay");
-      console.error("🚀 sceneRef.current exists:", !!sceneRef.current);
+      console.error("🚀 viewerSceneRef.current exists:", !!viewerSceneRef.current);
       console.error("🚀 storyPlay exists:", !!storyPlay);
     }
   };

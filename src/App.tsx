@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Sidebar from "./components/Sidebar";
 import { PhaserPreview } from "./components/PhaserPreview";
 import { loadStoryGroupsFromModules, setupGlobalComponents } from "./utils/storyLoader";
@@ -22,6 +22,8 @@ function App({ userStoryModules }: AppProps) {
   const [storyPlay, setStoryPlay] = useState<
     ((scene: Phaser.Scene, component?: unknown) => void | Promise<void>) | null
   >(null);
+  // Use useRef instead of useState to store preloadScene class
+  const preloadSceneRef = useRef<(new () => Phaser.Scene) | null>(null);
   const [playLogs, setPlayLogs] = useState<string[]>([]);
 
   useEffect(() => {
@@ -52,6 +54,11 @@ function App({ userStoryModules }: AppProps) {
         setStoryName(firstStory.name);
         setStoryArgs(firstStory.args);
         setStoryPlay(initialPlayFunction || null);
+        const initialPreloadScene = groups[0].preloadScene;
+        console.log('🏁 Initial preloadScene class type:', typeof initialPreloadScene);
+        console.log('🏁 Setting preloadSceneRef.current to:', initialPreloadScene);
+        preloadSceneRef.current = initialPreloadScene || null;
+        console.log('🏁 preloadSceneRef.current set completed');
       }
     }
 
@@ -86,6 +93,11 @@ function App({ userStoryModules }: AppProps) {
     setStoryName(story.name);
     setStoryArgs(story.args);
     setStoryPlay(playFunction || null);
+    const preloadScene = storyGroups[groupIndex].preloadScene;
+    console.log('🔄 Story group preloadScene class type:', typeof preloadScene);
+    console.log('🔄 Setting preloadSceneRef.current to:', preloadScene);
+    preloadSceneRef.current = preloadScene || null;
+    console.log('🔄 preloadSceneRef.current set completed');
   }, [storyGroups]);
 
   const handlePlayLog = useCallback((log: string) => {
@@ -109,6 +121,7 @@ function App({ userStoryModules }: AppProps) {
             storyCode={storyCode}
             storyName={storyName}
             storyArgs={storyArgs}
+            preloadScene={preloadSceneRef.current}
             storyPlay={storyPlay}
             onPlayLog={handlePlayLog}
             onPlayStart={handlePlayStart}

@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/index.ts","./src/vite-env.d.ts","./src/components/phaserpreview.tsx","./src/components/sidebar.tsx","./src/utils/expectlibrary.ts","./src/utils/storyloader.ts","./src/utils/storybookexpect.ts"],"version":"5.8.3"}

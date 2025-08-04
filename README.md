@@ -44,6 +44,10 @@
     <td align="center">📦</td>
     <td><strong>No Setup Required</strong><br/>Just create .demo.ts files and run npm command</td>
   </tr>
+  <tr>
+    <td align="center">⚡</td>
+    <td><strong>Asset Loading</strong><br/>PreloadScene support for centralized asset management</td>
+  </tr>
 </table>
 
 ## 📦 Installation
@@ -161,6 +165,85 @@ export const InteractiveButton: Demo<typeof meta> = {
   }
 };
 ```
+
+## ⚡ Asset Loading with PreloadScene
+
+For components that require assets (images, sounds, etc.), you can create a PreloadScene class to handle asset loading:
+
+### 1️⃣ Create a PreloadScene class
+
+```typescript
+// src/GoldPreloadScene.ts
+import * as Phaser from 'phaser';
+
+export class GoldPreloadScene extends Phaser.Scene {
+  constructor() {
+    super({ key: 'GoldPreloadScene' });
+  }
+  
+  preload() {
+    // Load all assets your component needs
+    this.load.image('gold', 'img/gold.png');
+    this.load.image('silver', 'img/silver.png');
+    this.load.audio('coinSound', 'audio/coin.mp3');
+  }
+}
+```
+
+### 2️⃣ Reference the PreloadScene in your demo
+
+```typescript
+// src/Gold.demo.ts
+import { Meta, Demo } from 'phaser-viewer';
+import { Gold } from './Gold';
+import { GoldPreloadScene } from './GoldPreloadScene';
+
+const meta = {
+  component: Gold,
+  title: 'Sprites/Gold',
+  description: 'Gold coin sprite with preloaded assets',
+  preloadScene: GoldPreloadScene  // ← Add this line
+} as const satisfies Meta<typeof Gold>;
+
+export default meta;
+
+export const BasicGold: Demo<typeof meta> = {
+  name: 'Basic Gold Coin',
+  args: { x: 400, y: 300 },
+  create: (scene: Phaser.Scene, args) => {
+    // Assets are already loaded and available!
+    return new Gold(scene, args.x, args.y);
+  }
+};
+```
+
+### 3️⃣ Use assets in your component
+
+```typescript
+// src/Gold.ts
+export class Gold extends Phaser.GameObjects.Sprite {
+  constructor(scene: Phaser.Scene, x: number, y: number) {
+    // The 'gold' texture is already loaded by GoldPreloadScene
+    super(scene, x, y, 'gold');
+    scene.add.existing(this);
+    
+    // You can also use other preloaded assets
+    this.setInteractive();
+    this.on('pointerdown', () => {
+      scene.sound.play('coinSound'); // Audio is also preloaded
+    });
+  }
+}
+```
+
+### How it works
+
+1. **PreloadScene starts first** - Phaser Viewer automatically detects and runs your PreloadScene
+2. **Assets are loaded** - All assets defined in `preload()` method are loaded into memory
+3. **ViewerScene launches** - After loading completes, the viewer scene starts
+4. **Assets are available** - Your components can immediately use the preloaded assets
+
+This ensures smooth component rendering without loading delays or missing asset errors.
 
 ## 🛠️ Commands
 

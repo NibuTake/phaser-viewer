@@ -4,6 +4,7 @@ export interface Story {
   name: string;
   create: (scene: Phaser.Scene, args?: unknown) => unknown; // Function only
   args?: unknown; // Optional arguments for the create function
+  preload?: (scene: Phaser.Scene) => void | Promise<void>; // Optional preload function for asset loading
   play?: (scene: Phaser.Scene, component?: unknown) => void | Promise<void>; // Optional play function for animations and interactions
 }
 
@@ -12,6 +13,7 @@ export interface StoryGroup {
   description?: string;
   tags?: string[];
   stories: Story[];
+  preloadScene?: new () => Phaser.Scene;
 }
 
 interface SidebarProps {

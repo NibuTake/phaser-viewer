@@ -11,6 +11,7 @@ export interface Meta<T = unknown> {
   description?: string;
   tags?: string[];
   parameters?: Record<string, unknown>;
+  preloadScene?: new () => Phaser.Scene;
 }
 
 export interface DemoObj<TComponent = unknown, TArgs = unknown> {
