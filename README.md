@@ -23,7 +23,7 @@
 
 ---
 
-> ⚠️ **Development Status**: This project is currently in early development (v0.1.0). Some features may be incomplete or missing. We welcome your ideas, feedback, and feature requests! Please [open an issue](https://github.com/NibuTake/phaser-viewer/issues) to share your thoughts.
+> ⚠️ **Development Status**: This project is currently in early development (v0.1.1). Some features may be incomplete or missing. We welcome your ideas, feedback, and feature requests! Please [open an issue](https://github.com/NibuTake/phaser-viewer/issues) to share your thoughts.
 
 ## ✨ Features
 
