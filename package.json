@@ -1,6 +1,6 @@
 {
   "name": "phaser-viewer",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A Storybook-like development environment for Phaser 3 components with interactive testing",
   "keywords": [
     "phaser",
@@ -34,10 +34,10 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./utils/storybookExpect": {
-      "types": "./dist/utils/storybookExpect.d.ts",
-      "import": "./dist/utils/storybookExpect.js",
-      "require": "./dist/utils/storybookExpect.js"
+    "./test": {
+      "types": "./dist/utils/expect.d.ts",
+      "import": "./dist/utils/expect.js",
+      "require": "./dist/utils/expect.js"
     }
   },
   "files": [

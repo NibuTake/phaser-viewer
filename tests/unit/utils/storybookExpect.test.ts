@@ -1,5 +1,5 @@
 import { describe, it, expect as vitestExpect, vi, beforeEach } from 'vitest'
-import { expect as storybookExpect, delay } from '@/utils/storybookExpect'
+import { expect as storybookExpect, delay } from '@/utils/expect'
 
 describe('storybookExpect', () => {
   let mockDispatchEvent: ReturnType<typeof vi.fn>

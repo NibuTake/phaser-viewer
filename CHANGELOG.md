@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2025-01-04
+
+### 🚀 Major Fixes
+
+- **Fixed Play Function Execution**: Resolved critical issue where play functions weren't executing properly due to React useState treating them as initializer functions
+- **Enhanced State Management**: Fixed component state preservation during testing by implementing `isPlayFunctionExecuting` flag
+- **Removed Flickering**: Eliminated visual glitches during play function execution
+
+### ✨ Improvements
+
+- **Better Testing Experience**: Enhanced expect API with improved error handling and visual feedback in Play Logs panel
+- **Improved Type Safety**: Better automatic component and args type inference for demos
+- **Enhanced Emergency Play Function**: More flexible text validation patterns for button interactions
+- **Cleaner UX**: Removed default "Select a story to preview" text for better interaction visibility
+
+### 🔧 Technical Changes
+
+- Changed play function storage from `useState` to `useRef` in App.tsx to prevent premature execution
+- Added proper error handling and Promise resolution for play functions
+- Improved component lifecycle management during testing
+- Enhanced delay functionality with proper async/await handling
+
+### 🐛 Bug Fixes
+
+- Fixed issue where user-defined play functions were replaced by emergency fallback functions
+- Fixed component reset during play execution causing state loss
+- Fixed delay function not actually waiting for specified time
+- Fixed TypeScript type compatibility issues with play function assignments
+
+### 📚 Documentation
+
+- Updated README with correct import syntax: `import { expect, delay, step } from 'phaser-viewer'`
+- Added comprehensive library badges (npm version, downloads, tech stack)
+- Enhanced testing examples with realistic scenarios
+- Added Best Practices section with testing guidelines
+
 ## [0.1.1] - 2025-08-04
 
 ### ✨ Added

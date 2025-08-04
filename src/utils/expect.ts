@@ -210,7 +210,7 @@ export interface PlayFunctionContext {
   step: (name: string, fn: () => Promise<void>) => Promise<void>;
 }
 
-// Step function for organizing test steps
+// Step function for organizing test steps (Storybook-like)
 export async function step(name: string, fn: () => Promise<void>): Promise<void> {
   console.log(`🔹 ${name}`);
   window.dispatchEvent(new CustomEvent('playLog', { detail: `🔹 ${name}` }));

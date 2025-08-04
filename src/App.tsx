@@ -19,7 +19,7 @@ function App({ userStoryModules }: AppProps) {
   } | null>(null);
   const [storyName, setStoryName] = useState<string>("");
   const [storyArgs, setStoryArgs] = useState<unknown>(null);
-  const [storyPlay, setStoryPlay] = useState<
+  const storyPlayRef = useRef<
     ((scene: Phaser.Scene, component?: unknown) => void | Promise<void>) | null
   >(null);
   // Use useRef instead of useState to store preloadScene class
@@ -53,7 +53,7 @@ function App({ userStoryModules }: AppProps) {
         setStoryCode({ fn: firstStory.create });
         setStoryName(firstStory.name);
         setStoryArgs(firstStory.args);
-        setStoryPlay(initialPlayFunction || null);
+        storyPlayRef.current = initialPlayFunction || null;
         const initialPreloadScene = groups[0].preloadScene;
         console.log('🏁 Initial preloadScene class type:', typeof initialPreloadScene);
         console.log('🏁 Setting preloadSceneRef.current to:', initialPreloadScene);
@@ -92,7 +92,7 @@ function App({ userStoryModules }: AppProps) {
     setStoryCode({ fn: story.create });
     setStoryName(story.name);
     setStoryArgs(story.args);
-    setStoryPlay(playFunction || null);
+    storyPlayRef.current = playFunction || null;
     const preloadScene = storyGroups[groupIndex].preloadScene;
     console.log('🔄 Story group preloadScene class type:', typeof preloadScene);
     console.log('🔄 Setting preloadSceneRef.current to:', preloadScene);
@@ -122,7 +122,7 @@ function App({ userStoryModules }: AppProps) {
             storyName={storyName}
             storyArgs={storyArgs}
             preloadScene={preloadSceneRef.current}
-            storyPlay={storyPlay}
+            storyPlay={storyPlayRef.current}
             onPlayLog={handlePlayLog}
             onPlayStart={handlePlayStart}
           />

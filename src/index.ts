@@ -46,4 +46,7 @@ export interface StoryGroup {
   stories: Story[];
 }
 
+// Test utilities re-exported for convenience
+export { expect, delay, step } from './utils/expect';
+
 // Main component exports (no default export to avoid confusion)

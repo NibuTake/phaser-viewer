@@ -1,7 +1,7 @@
 <div align="center">
   <img src="./public/icons/icon-128.png" alt="Phaser Viewer Icon" width="128" height="128" />
   <h1>
-    🎮 Phaser Viewer
+    Phaser Viewer
   </h1>
   
   <p>
@@ -9,10 +9,10 @@
   </p>
   
   <p>
-    <img src="https://img.shields.io/badge/phaser-v3.90.0-blue?style=flat-square" alt="Phaser 3.90.0" />
-    <img src="https://img.shields.io/badge/node-v18+-green?style=flat-square" alt="Node.js 18+" />
-    <img src="https://img.shields.io/badge/typescript-5.9+-blue?style=flat-square" alt="TypeScript 5.9+" />
-    <img src="https://img.shields.io/github/stars/NibuTake/phaser-viewer?style=flat-square" alt="GitHub Stars" />
+    <img src="https://img.shields.io/badge/version-v0.1.2-blue?style=flat-square" alt="Version 0.1.2" />
+    <img src="https://img.shields.io/badge/phaser-v3.90.0-blue?style=flat-square&logo=gamepad" alt="Phaser 3.90.0" />
+    <img src="https://img.shields.io/badge/typescript-5.9+-blue?style=flat-square&logo=typescript" alt="TypeScript 5.9+" />
+    <img src="https://img.shields.io/badge/node-v18+-green?style=flat-square&logo=node.js" alt="Node.js 18+" />
     <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT License" />
   </p>
   
@@ -23,7 +23,6 @@
 
 ---
 
-> ⚠️ **Development Status**: This project is currently in early development (v0.1.1). Some features may be incomplete or missing. We welcome your ideas, feedback, and feature requests! Please [open an issue](https://github.com/NibuTake/phaser-viewer/issues) to share your thoughts.
 
 ## ✨ Features
 
@@ -34,7 +33,7 @@
   </tr>
   <tr>
     <td align="center">🧪</td>
-    <td><strong>Interactive Testing</strong><br/>Built-in expect functions with visual feedback</td>
+    <td><strong>Interactive Testing</strong><br/>Built-in expect API with visual feedback and play logs</td>
   </tr>
   <tr>
     <td align="center">🔥</td>
@@ -47,6 +46,10 @@
   <tr>
     <td align="center">⚡</td>
     <td><strong>Asset Loading</strong><br/>PreloadScene support for centralized asset management</td>
+  </tr>
+  <tr>
+    <td align="center">🎯</td>
+    <td><strong>TypeScript First</strong><br/>Full type safety with automatic component and args inference</td>
   </tr>
 </table>
 
@@ -74,7 +77,7 @@ Create a `.demo.ts` file alongside your component:
 
 ```typescript
 // src/Button.demo.ts
-import { expect } from 'phaser-viewer/utils/storybookExpect';
+import { expect, delay } from 'phaser-viewer';
 import { Meta, Demo } from 'phaser-viewer';
 import { Button } from './Button'; // Import your component
 
@@ -93,7 +96,12 @@ export const BasicButton: Demo<typeof meta> = {
     return new Button(scene, args.x, args.y, args.text);
   },
   play: async (scene: Phaser.Scene, component) => {
-    await expect(component, 'Button should exist').toBeTruthy();
+    await expect(component.getText(), 'Initial text').toBe('Click Me!');
+    
+    // Test interaction
+    component.emit('pointerdown');
+    await delay(100);
+    await expect(component.getText(), 'After click').toBe('Clicked!');
   }
 };
 ```
@@ -140,10 +148,10 @@ export default config;
 
 ## 🧪 Testing Your Components
 
-Import the expect API to test your components:
+Phaser Viewer includes a powerful testing API inspired by @storybook/test. Test results appear in the **Play Logs** panel with visual feedback:
 
 ```typescript
-import { expect, delay } from 'phaser-viewer/utils/storybookExpect';
+import { expect, delay } from 'phaser-viewer';
 
 export const InteractiveButton: Demo<typeof meta> = {
   name: 'Interactive Button',
@@ -152,16 +160,19 @@ export const InteractiveButton: Demo<typeof meta> = {
     return new Button(scene, args.x, args.y, args.text);
   },
   play: async (scene: Phaser.Scene, component) => {
-    // Test component properties
-    await expect(component, 'Button should exist').toBeTruthy();
+    // Test initial state
+    await expect(component.getText(), 'Initial text').toBe('Test Button');
     await expect(component.visible, 'Should be visible').toBe(true);
     
-    // Wait for animations
-    await delay(1000);
-    
-    // Test interactions
+    // Test button click
     component.emit('pointerdown');
-    await expect(component.getText(), 'Text should change').toBe('Clicked!');
+    await delay(100);
+    await expect(component.getText(), 'After click').toBe('Clicked!');
+    
+    // Test multiple clicks
+    component.emit('pointerdown');
+    await delay(100);
+    await expect(component.getText(), 'After second click').toBe('Clicked 2x');
   }
 };
 ```
@@ -248,7 +259,26 @@ This ensures smooth component rendering without loading delays or missing asset 
 ## 🛠️ Commands
 
 - `npx phaser-viewer` - Start development server
-- `phaser-viewer --help` - Show help
+- `npx phaser-viewer --port 3000` - Start on custom port
+- `npx phaser-viewer --help` - Show help
+
+## 🎯 Best Practices
+
+### 🔍 **Testing Guidelines**
+- Use descriptive test names for better debugging
+- Test component properties and interactions separately
+- Use `delay()` for timing-dependent operations
+- Leverage `step()` for organized test flow
+
+### 📁 **File Organization**
+- Keep `.demo.ts` files close to component files
+- Use hierarchical titles (`UI/Button`, `Sprites/Gold`) for better organization
+- Create PreloadScenes for asset-heavy components
+
+### ⚡ **Performance Tips**
+- PreloadScenes run once per story group - keep them lightweight
+- Use `delay()` sparingly - only when necessary for timing
+- Test real interactions rather than just component creation
 
 ---
 
