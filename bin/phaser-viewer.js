@@ -18,6 +18,29 @@ async function runCommand() {
     return;
   }
   
+  if (command === '--help' || command === '-h' || command === 'help') {
+    console.log(`
+Phaser Viewer - A Storybook-like development environment for Phaser 3 components
+
+Usage:
+  npx phaser-viewer [command]
+
+Commands:
+  dev (default)    Start development server
+  test            Run automated tests for Play functions
+  help, --help    Show this help message
+
+Options:
+  --port <port>   Specify port number (default: 5173)
+
+Examples:
+  npx phaser-viewer                    # Start development server
+  npx phaser-viewer test              # Run tests
+  npx phaser-viewer --port 3000       # Start on port 3000
+`);
+    return;
+  }
+  
   console.log('🚀 Starting Phaser Viewer...');
   
   // Read user configuration

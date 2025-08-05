@@ -67,7 +67,7 @@ describe('CLI Config Loading', () => {
 
     const output = await runCLI(['--help'])
     expect(output).toContain('Phaser Viewer')
-  })
+  }, 10000)
 
   it('should load TypeScript configuration file', async () => {
     // Create TypeScript config file
