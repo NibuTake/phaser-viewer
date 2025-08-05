@@ -11,6 +11,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 async function runCommand() {
+  const command = process.argv[2] || 'dev';
+  
+  if (command === 'test') {
+    await runTestMode();
+    return;
+  }
+  
   console.log('🚀 Starting Phaser Viewer...');
   
   // Read user configuration
@@ -237,6 +244,413 @@ ReactDOM.render(
     process.exit(code);
   });
 
+}
+
+async function runTestMode() {
+  console.log('🧪 Starting Phaser Viewer Test Runner...');
+  
+  // Read user configuration (same as dev mode)
+  let userConfig = { filePath: './src/**/*.demo.ts' };
+  
+  const configPaths = ['./phaser-viewer.config.ts', './phaser-viewer.config.js'];
+  let configPath = null;
+  
+  for (const path of configPaths) {
+    if (existsSync(path)) {
+      configPath = path;
+      break;
+    }
+  }
+  
+  if (configPath) {
+    console.log('🔍 Config file found:', configPath);
+    try {
+      if (configPath.endsWith('.ts')) {
+        const esbuild = await import('esbuild');
+        const { outputFiles } = await esbuild.build({
+          entryPoints: [configPath],
+          bundle: true,
+          platform: 'node',
+          format: 'esm',
+          target: 'node18',
+          write: false,
+          outdir: '.',
+          external: ['phaser', 'phaser-viewer']
+        });
+        
+        const compiledCode = outputFiles[0].text;
+        const tempFile = `./phaser-viewer.config.temp.mjs`;
+        writeFileSync(tempFile, compiledCode);
+        
+        try {
+          const configModule = await import(`file://${process.cwd()}/${tempFile}?t=${Date.now()}`);
+          userConfig = { ...userConfig, ...configModule.default };
+          unlinkSync(tempFile);
+        } catch (importError) {
+          unlinkSync(tempFile);
+          throw importError;
+        }
+      } else {
+        const configModule = await import(`file://${process.cwd()}/${configPath}`);
+        userConfig = { ...userConfig, ...configModule.default };
+      }
+      console.log('🔧 Loaded user config:', userConfig);
+    } catch (error) {
+      console.warn(`⚠️ Failed to load ${configPath}:`, error.message);
+      console.log('📄 Using default configuration');
+    }
+  }
+  
+  // Generate a simplified test script instead of using the complex plugin approach
+  const testScriptContent = `import { test, expect } from 'vitest';
+import * as Phaser from 'phaser';
+
+// Simple test runner for demo files
+const demoModules = import.meta.glob('${userConfig.filePath}', { eager: true });
+
+// Play function test results tracking
+let totalPlayTests = 0;
+let passedPlayTests = 0;
+let failedPlayTests = 0;
+let playTestDetails = [];
+let completedVitestTests = 0;
+let totalVitestTests = 0;
+
+// Count total expected Vitest tests and Play functions
+Object.entries(demoModules).forEach(([filePath, module]) => {
+  const meta = module.default || module.meta;
+  if (meta) {
+    const demoExports = Object.entries(module).filter(([key, value]) => 
+      key !== 'meta' && key !== 'default' && typeof value === 'object' && value.create
+    );
+    totalVitestTests += demoExports.length;
+    
+    // Count Play functions (these are our actual tests)
+    demoExports.forEach(([demoName, demo]) => {
+      if (demo.play && typeof demo.play === 'function') {
+        totalPlayTests++;
+      }
+    });
+  }
+});
+
+Object.entries(demoModules).forEach(([filePath, module]) => {
+  const fileName = filePath.split('/').pop().replace('.demo.ts', '');
+  
+  // Get the meta and demos from the module (meta is the default export)
+  const meta = module.default || module.meta;
+  if (!meta) {
+    console.warn('⚠️ No meta found in', filePath);
+    return;
+  }
+  
+  // Find all demo exports (anything that's not 'meta' or 'default')
+  const demoExports = Object.entries(module).filter(([key, value]) => 
+    key !== 'meta' && key !== 'default' && typeof value === 'object' && value.create
+  );
+  
+  demoExports.forEach(([demoName, demo]) => {
+    test(\`\${fileName} - \${demoName}\`, async () => {
+      // Simple test setup
+      const config = {
+        type: Phaser.CANVAS,
+        width: 800,
+        height: 600,
+        parent: document.body,
+        backgroundColor: '#222222',
+        scene: meta.preloadScene ? [
+          // Custom preload scene class with mocked assets
+          {
+            key: 'TestPreloadScene',
+            preload: function() {
+              // Mock texture data
+              const mockTextures = {
+                'gold': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYGD4DwABBAEAcCBlCw==', // Gold color
+                'button': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==', // Transparent
+                '__DEFAULT__': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=='
+              };
+
+              // Override load.image to use mock textures
+              const originalLoadImage = this.load.image;
+              this.load.image = function(key, url) {
+                const mockUrl = mockTextures[key] || mockTextures['__DEFAULT__'];
+                return originalLoadImage.call(this, key, mockUrl);
+              };
+              
+              // Execute the user's preload scene
+              if (meta.preloadScene) {
+                try {
+                  const userPreloadScene = new meta.preloadScene();
+                  // Copy Phaser context
+                  Object.assign(userPreloadScene, {
+                    load: this.load,
+                    scene: this.scene,
+                    game: this.game,
+                    registry: this.registry,
+                    events: this.events,
+                  });
+                  // Execute user preload logic
+                  if (userPreloadScene.preload) {
+                    userPreloadScene.preload();
+                  }
+                } catch (error) {
+                  console.warn('⚠️ Preload scene error (non-critical):', error.message);
+                }
+              }
+            },
+            create: async function() {
+              this.scene.start('TestScene');
+            }
+          },
+          {
+            key: 'TestScene',
+            create: async function() {
+              try {
+                // Create component using demo
+                const component = demo.create(this, demo.args || {});
+                expect(component).toBeDefined();
+                
+                // Run play function if it exists (this is our actual test)
+                if (demo.play && typeof demo.play === 'function') {
+                  try {
+                    const playResult = demo.play(this, component);
+                    
+                    // Always treat as async for consistency
+                    try {
+                      await Promise.resolve(playResult);
+                      passedPlayTests++;
+                      playTestDetails.push({ name: fileName + ' - ' + demoName, status: 'passed' });
+                    } catch (error) {
+                      failedPlayTests++;
+                      playTestDetails.push({ name: fileName + ' - ' + demoName, status: 'failed', error: error.message });
+                    }
+                  } catch (error) {
+                    failedPlayTests++;
+                    playTestDetails.push({ name: fileName + ' - ' + demoName, status: 'failed', error: error.message });
+                  }
+                }
+                
+              } catch (error) {
+                failedTests++;
+                totalTests++;
+                testDetails.push({ name: \`\${fileName} - \${demoName} (Component)\`, status: 'failed', error: error.message });
+                throw error;
+              } finally {
+                // Cleanup
+                this.game.destroy(true);
+              }
+            }
+          }
+        ] : [
+          // Simple scene for demos without preloadScene
+          {
+            key: 'TestScene',
+            preload: function() {
+              // Mock common textures for demos without preloadScene
+              const mockTextures = {
+                'gold': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYGD4DwABBAEAcCBlCw==',
+                'button': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==',
+                '__DEFAULT__': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=='
+              };
+              
+              Object.entries(mockTextures).forEach(([key, dataUrl]) => {
+                this.load.image(key, dataUrl);
+              });
+            },
+            create: async function() {
+              try {
+                // Create component using demo
+                const component = demo.create(this, demo.args || {});
+                expect(component).toBeDefined();
+                
+                // Run play function if it exists (this is our actual test)
+                if (demo.play && typeof demo.play === 'function') {
+                  try {
+                    const playResult = demo.play(this, component);
+                    
+                    // Always treat as async for consistency
+                    try {
+                      await Promise.resolve(playResult);
+                      passedPlayTests++;
+                      playTestDetails.push({ name: fileName + ' - ' + demoName, status: 'passed' });
+                    } catch (error) {
+                      failedPlayTests++;
+                      playTestDetails.push({ name: fileName + ' - ' + demoName, status: 'failed', error: error.message });
+                    }
+                  } catch (error) {
+                    failedPlayTests++;
+                    playTestDetails.push({ name: fileName + ' - ' + demoName, status: 'failed', error: error.message });
+                  }
+                }
+                
+              } catch (error) {
+                failedTests++;
+                totalTests++;
+                testDetails.push({ name: \`\${fileName} - \${demoName} (Component)\`, status: 'failed', error: error.message });
+                throw error;
+              } finally {
+                // Cleanup
+                this.game.destroy(true);
+              }
+            }
+          }
+        ],
+        audio: { noAudio: true },
+        banner: false
+      };
+      
+      // Create game and wait for it to complete
+      const game = new Phaser.Game(config);
+      
+      await new Promise((resolve) => {
+        game.events.once('ready', resolve);
+      });
+      
+      // Give it a moment to run (longer for async Play functions)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Increment completed test count
+      completedVitestTests++;
+      
+      // Display Play function test results only after the last test
+      if (completedVitestTests === totalVitestTests) {
+        console.error('PLAY_RESULTS:' + passedPlayTests + ',' + failedPlayTests);
+        const failedTests = playTestDetails.filter(test => test.status === 'failed');
+        failedTests.forEach(test => {
+          console.error('PLAY_ERROR:' + test.name + ':' + test.error);
+        });
+      }
+    }, 10000); // 10 second timeout per test
+  });
+});
+
+`;
+
+  // Write simplified test script
+  const testScriptPath = './phaser-viewer.test.js';
+  writeFileSync(testScriptPath, testScriptContent);
+
+  // Generate minimal Vitest config
+  const vitestConfigContent = `import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    browser: {
+      enabled: true,
+      provider: 'playwright',
+      instances: [
+        {
+          browser: 'chromium',
+          headless: true,
+        }
+      ],
+    },
+    include: ['./phaser-viewer.test.js'],
+    testTimeout: 30000,
+    hookTimeout: 10000,
+    globals: true,
+    reporter: 'default',
+    silent: false,
+  },
+  server: {
+    fs: {
+      allow: ['.', process.cwd()]
+    }
+  },
+  logLevel: 'info',
+});`;
+
+  // Write Vitest config
+  const vitestConfigPath = './phaser-viewer.vitest.config.js';
+  writeFileSync(vitestConfigPath, vitestConfigContent);
+  
+  // Install necessary test dependencies if not available
+  
+  const packageJsonPath = './package.json';
+  let needsInstall = false;
+  let installPackages = [];
+  
+  if (existsSync(packageJsonPath)) {
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
+    const allDeps = { 
+      ...packageJson.dependencies, 
+      ...packageJson.devDependencies 
+    };
+    
+    const requiredPackages = ['vitest', '@vitest/browser', 'playwright'];
+    
+    for (const pkg of requiredPackages) {
+      if (!allDeps[pkg]) {
+        installPackages.push(pkg);
+        needsInstall = true;
+      }
+    }
+  }
+  
+  if (needsInstall) {
+    const install = spawn('npm', ['install', '--save-dev', ...installPackages], {
+      stdio: 'pipe',
+      cwd: process.cwd(),
+      env: process.env
+    });
+    
+    await new Promise((resolve, reject) => {
+      install.on('close', (code) => {
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(new Error(`Failed to install dependencies. Exit code: ${code}`));
+        }
+      });
+    });
+  }
+  
+  const vitest = spawn('npx', ['vitest', 'run', '--config', vitestConfigPath], {
+    stdio: ['inherit', 'pipe', 'pipe'],
+    cwd: process.cwd(),
+    env: process.env
+  });
+  
+  // Capture Play function results from stderr
+  vitest.stderr.on('data', (data) => {
+    const output = data.toString();
+    const lines = output.split('\n');
+    for (const line of lines) {
+      if (line.includes('PLAY_RESULTS:')) {
+        const [passed, failed] = line.split('PLAY_RESULTS:')[1].split(',');
+        console.log('🎯 Play Functions: ' + passed + ' passed, ' + failed + ' failed');
+      }
+      if (line.includes('PLAY_ERROR:')) {
+        const parts = line.split('PLAY_ERROR:')[1].split(':');
+        const name = parts[0];
+        const error = parts.slice(1).join(':');
+        console.log('❌ ' + name + ': ' + error);
+      }
+    }
+  });
+  
+  // Cleanup function for test mode (silent)
+  const cleanupTest = () => {
+    try {
+      if (existsSync(vitestConfigPath)) {
+        unlinkSync(vitestConfigPath);
+      }
+      if (existsSync(testScriptPath)) {
+        unlinkSync(testScriptPath);
+      }
+    } catch (error) {
+      // Silent cleanup
+    }
+  };
+  
+  // Cleanup on exit
+  process.on('SIGINT', cleanupTest);
+  process.on('SIGTERM', cleanupTest);
+
+  vitest.on('close', (code) => {
+    cleanupTest();
+    process.exit(code);
+  });
 }
 
 runCommand().catch(console.error);

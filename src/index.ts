@@ -79,4 +79,7 @@ export interface PhaserViewerConfig {
 // Test utilities re-exported for convenience
 export { expect, delay, step } from './utils/expect';
 
+// Test runner exports
+export * from './test-runner';
+
 // Main component exports (no default export to avoid confusion)

@@ -772,68 +772,69 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
     };
   }, [storyCode, storyArgs, preloadScene, storyName, executeStoryWithPreload, executeDirectlyToViewerScene]);
 
-  const executePlayFunction = async () => {
-    console.log("🚀 Play function execution started!");
-    
-    // ⚡ Performance: Streamlined play function execution
-    const hasPreloadScene = !!preloadScene;
-    console.log(`⚡ Play execution: ${storyName || 'Unknown'} (PreloadScene: ${hasPreloadScene ? 'Yes' : 'No'})`);
-    
-    console.log("🚀 viewerSceneRef.current:", viewerSceneRef.current);
-    console.log("🚀 storyPlay:", storyPlay);
-    console.log("🚀 storyPlay type:", typeof storyPlay);
-    
-    if (viewerSceneRef.current) {
-      console.log("🚀 viewerSceneRef.current has scene:", !!viewerSceneRef.current);
-    }
-    
-    // Clear previous test results
-    (window as { clearTestResults?: () => void }).clearTestResults?.();
-    
-    if (viewerSceneRef.current && storyPlay) {
-      // Reset component state BEFORE executing play function
-      console.log("🔄 Resetting component state before test execution...");
-      if (onPlayLog) {
-        onPlayLog('🔄 Resetting component state before test execution...');
-      }
-      
-      // Reset component first
-      await viewerSceneRef.current.resetComponentStateSync();
-      
-      // Re-execute story using optimized flow
-      if (storyCode) {
-        // Apply the same optimization logic for play function execution
-        if (!preloadScene) {
-          console.log("🔄 Re-executing story via direct ViewerScene flow (optimized) before play");
-          await executeDirectlyToViewerScene();
-        } else {
-          console.log("🔄 Re-executing story via PreloadScene → ViewerScene flow before play");
-          await executeStoryWithPreload();
-        }
-      }
-      
-      // Small delay to ensure reset and recreation is complete
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Also log to the play logs when tests start
-      if (onPlayStart) {
-        onPlayStart();
-      }
-      if (onPlayLog) {
-        onPlayLog('Starting test execution...');
-      }
-      await viewerSceneRef.current.executePlayFunction(storyPlay, onPlayLog, onPlayStart);
-    } else {
-      console.error("🚀 Cannot execute play function - missing scene or storyPlay");
-      console.error("🚀 viewerSceneRef.current exists:", !!viewerSceneRef.current);
-      console.error("🚀 storyPlay exists:", !!storyPlay);
-    }
-  };
-
   const handleSidebarPlayRequest = useCallback(async () => {
     console.log("🎮 Received sidebar play request");
+    
+    const executePlayFunction = async () => {
+      console.log("🚀 Play function execution started!");
+      
+      // ⚡ Performance: Streamlined play function execution
+      const hasPreloadScene = !!preloadScene;
+      console.log(`⚡ Play execution: ${storyName || 'Unknown'} (PreloadScene: ${hasPreloadScene ? 'Yes' : 'No'})`);
+      
+      console.log("🚀 viewerSceneRef.current:", viewerSceneRef.current);
+      console.log("🚀 storyPlay:", storyPlay);
+      console.log("🚀 storyPlay type:", typeof storyPlay);
+      
+      if (viewerSceneRef.current) {
+        console.log("🚀 viewerSceneRef.current has scene:", !!viewerSceneRef.current);
+      }
+      
+      // Clear previous test results
+      (window as { clearTestResults?: () => void }).clearTestResults?.();
+      
+      if (viewerSceneRef.current && storyPlay) {
+        // Reset component state BEFORE executing play function
+        console.log("🔄 Resetting component state before test execution...");
+        if (onPlayLog) {
+          onPlayLog('🔄 Resetting component state before test execution...');
+        }
+        
+        // Reset component first
+        await viewerSceneRef.current.resetComponentStateSync();
+        
+        // Re-execute story using optimized flow
+        if (storyCode) {
+          // Apply the same optimization logic for play function execution
+          if (!preloadScene) {
+            console.log("🔄 Re-executing story via direct ViewerScene flow (optimized) before play");
+            await executeDirectlyToViewerScene();
+          } else {
+            console.log("🔄 Re-executing story via PreloadScene → ViewerScene flow before play");
+            await executeStoryWithPreload();
+          }
+        }
+        
+        // Small delay to ensure reset and recreation is complete
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Also log to the play logs when tests start
+        if (onPlayStart) {
+          onPlayStart();
+        }
+        if (onPlayLog) {
+          onPlayLog('Starting test execution...');
+        }
+        await viewerSceneRef.current.executePlayFunction(storyPlay, onPlayLog, onPlayStart);
+      } else {
+        console.error("🚀 Cannot execute play function - missing scene or storyPlay");
+        console.error("🚀 viewerSceneRef.current exists:", !!viewerSceneRef.current);
+        console.error("🚀 storyPlay exists:", !!storyPlay);
+      }
+    };
+    
     await executePlayFunction();
-  }, [executePlayFunction]);
+  }, [storyPlay, onPlayLog, onPlayStart, preloadScene, storyName, storyCode, executeDirectlyToViewerScene, executeStoryWithPreload]);
 
   // Listen for sidebar play requests
   useEffect(() => {

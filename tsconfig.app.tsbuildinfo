@@ -1,1 +1,1 @@
-{"root":["./src/app.tsx","./src/index.ts","./src/vite-env.d.ts","./src/components/phaserpreview.tsx","./src/components/sidebar.tsx","./src/utils/expect.ts","./src/utils/storyloader.ts"],"version":"5.8.3"}
+{"root":["./src/app.tsx","./src/index.ts","./src/vite-env.d.ts","./src/components/phaserpreview.tsx","./src/components/sidebar.tsx","./src/test-runner/index.ts","./src/test-runner/test-utils.ts","./src/test-runner/vitest-plugin.ts","./src/utils/expect.ts","./src/utils/storyloader.ts"],"version":"5.8.3"}
