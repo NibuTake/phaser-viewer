@@ -11,6 +11,12 @@ interface PhaserPreviewProps {
     | null;
   onPlayLog?: (log: string) => void;
   onPlayStart?: () => void;
+  sceneConfig?: {
+    width?: number;
+    height?: number;
+    backgroundColor?: string;
+    displayScale?: number;
+  };
 }
 
 interface IconUris {
@@ -21,6 +27,7 @@ interface IconUris {
 interface UserPreloadScene extends Phaser.Scene {
   preload?: () => void;
 }
+
 
 // Base class for wrapping user PreloadScene classes
 class UserPreloadSceneWrapper extends Phaser.Scene {
@@ -33,6 +40,7 @@ class UserPreloadSceneWrapper extends Phaser.Scene {
   }
 
   setUserPreloadSceneClass(PreloadSceneClass: new () => UserPreloadScene) {
+    console.log("⚡ Setting PreloadScene class:", PreloadSceneClass.name);
     this.UserPreloadSceneClass = PreloadSceneClass;
   }
 
@@ -96,13 +104,27 @@ class UserPreloadSceneWrapper extends Phaser.Scene {
   }
 }
 
-// ViewerScene: コンポーネント表示用シーン  
+// ViewerScene: コンポーネント表示用シーン
+// ⚡ Performance Optimizations Applied:
+//   - PreloadScene skip conditions for stories without asset loading requirements
+//   - Direct ViewerScene execution bypasses unnecessary scene transitions
+//   - Reduced logging noise while maintaining debugging capabilities
+//   - Future-ready for shared PreloadScene functionality
 class ViewerScene extends Phaser.Scene {
   public createdComponent: unknown = null;
   public isPlayFunctionExecuting: boolean = false;
+  private sceneWidth: number = 800;
+  private sceneHeight: number = 600;
+  private sceneBackgroundColor: number = 0x222222;
 
   constructor() {
     super({ key: "ViewerScene" });
+  }
+
+  setSceneConfig(width: number, height: number, backgroundColor: number) {
+    this.sceneWidth = width;
+    this.sceneHeight = height;
+    this.sceneBackgroundColor = backgroundColor;
   }
 
   preload() {
@@ -114,7 +136,7 @@ class ViewerScene extends Phaser.Scene {
     this.children.removeAll();
 
     // Add background
-    this.add.rectangle(400, 300, 800, 600, 0x222222);
+    this.add.rectangle(this.sceneWidth / 2, this.sceneHeight / 2, this.sceneWidth, this.sceneHeight, this.sceneBackgroundColor);
 
     // Removed default text to make interactions more visible
     // Components will be created by story code instead
@@ -156,7 +178,7 @@ class ViewerScene extends Phaser.Scene {
       console.log("🧹 ViewerScene: Cleared previous components and references");
 
       // Add background
-      this.add.rectangle(400, 300, 800, 600, 0x222222);
+      this.add.rectangle(this.sceneWidth / 2, this.sceneHeight / 2, this.sceneWidth, this.sceneHeight, this.sceneBackgroundColor);
 
       // Note: Assets are already loaded by PreloadScene, so we can directly use them
 
@@ -209,7 +231,7 @@ class ViewerScene extends Phaser.Scene {
           typeof storyFunction,
         );
         this.add
-          .text(400, 300, "Invalid story code", {
+          .text(this.sceneWidth / 2, this.sceneHeight / 2, "Invalid story code", {
             fontSize: "18px",
             color: "#ff0000",
           })
@@ -218,7 +240,7 @@ class ViewerScene extends Phaser.Scene {
     } catch (error) {
       console.error("Error executing story code:", error);
       this.add
-        .text(400, 300, "Error executing story", {
+        .text(this.sceneWidth / 2, this.sceneHeight / 2, "Error executing story", {
           fontSize: "18px",
           color: "#ff0000",
         })
@@ -416,7 +438,7 @@ class ViewerScene extends Phaser.Scene {
     this.createdComponent = null;
     
     // Add background
-    this.add.rectangle(400, 300, 800, 600, 0x222222);
+    this.add.rectangle(this.sceneWidth / 2, this.sceneHeight / 2, this.sceneWidth, this.sceneHeight, this.sceneBackgroundColor);
     
     console.log("🔄 Component state cleared, ready for fresh execution");
     return Promise.resolve();
@@ -441,6 +463,7 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
   storyPlay,
   onPlayLog,
   onPlayStart,
+  sceneConfig,
 }) => {
   const gameRef = useRef<HTMLDivElement>(null);
   const gameInstanceRef = useRef<Phaser.Game | null>(null);
@@ -448,11 +471,11 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
   const viewerSceneRef = useRef<ViewerScene | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_createdComponent, _setCreatedComponent] = useState<unknown>(null);
-  const [testResults, setTestResults] = useState<Array<{
-    name: string;
-    status: 'pass' | 'fail';
-    message: string;
-  }>>([]);
+  const [sceneDisplayConfig, setSceneDisplayConfig] = useState<{
+    width: number;
+    height: number;
+    displayScale: number;
+  }>({ width: 800, height: 600, displayScale: 1.0 });
 
   useEffect(() => {
     if (!gameRef.current) return;
@@ -468,13 +491,44 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
     // Make icons globally available (for compatibility with existing demos)
     (window as { iconUris?: IconUris }).iconUris = iconUris;
 
+    // Get scene configuration with defaults
+    const sceneWidth = sceneConfig?.width || 800;
+    const sceneHeight = sceneConfig?.height || 600;
+    const backgroundColor = sceneConfig?.backgroundColor || "#222222";
+    
+    // Calculate display scale for responsive design
+    const calculateDisplayScale = (): number => {
+      if (sceneConfig?.displayScale) {
+        return Math.max(0.1, Math.min(2.0, sceneConfig.displayScale));
+      }
+      
+      // Auto-calculate based on available space
+      // Assume sidebar takes ~300px, leave some margin
+      const availableWidth = window.innerWidth - 350;
+      const availableHeight = window.innerHeight - 250; // Header + logs panel
+      
+      const scaleX = availableWidth / sceneWidth;
+      const scaleY = availableHeight / sceneHeight;
+      
+      // Use the smaller scale to fit both dimensions, max 1.0 to avoid upscaling
+      const autoScale = Math.min(scaleX, scaleY, 1.0);
+      
+      return Math.max(0.3, autoScale); // Minimum 30% scale
+    };
+    
+    const displayScale = calculateDisplayScale();
+    console.log(`🎬 Scene display scaling: ${(displayScale * 100).toFixed(1)}% (${sceneWidth}x${sceneHeight} → ${Math.round(sceneWidth * displayScale)}x${Math.round(sceneHeight * displayScale)})`);
+    
+    // Update scene display configuration
+    setSceneDisplayConfig({ width: sceneWidth, height: sceneHeight, displayScale });
+    
     // Create Phaser game with both PreloadScene and ViewerScene
     const config: Phaser.Types.Core.GameConfig = {
       type: Phaser.AUTO,
-      width: 800,
-      height: 600,
+      width: sceneWidth,
+      height: sceneHeight,
       parent: gameRef.current,
-      backgroundColor: "#222222",
+      backgroundColor: backgroundColor,
       scene: [UserPreloadSceneWrapper, ViewerScene],
       audio: {
         disableWebAudio: true, // オーディオエラーを回避
@@ -492,16 +546,24 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
     gameInstanceRef.current = new Phaser.Game(config);
 
     // Get scene references
-    gameInstanceRef.current.events.once("ready", () => {
+    gameInstanceRef.current.events.once("ready", async () => {
       userPreloadSceneWrapperRef.current = gameInstanceRef.current?.scene.getScene(
         "UserPreloadSceneWrapper",
       ) as UserPreloadSceneWrapper;
       viewerSceneRef.current = gameInstanceRef.current?.scene.getScene(
         "ViewerScene",
       ) as ViewerScene;
+      
+      // Apply scene configuration to ViewerScene
+      if (viewerSceneRef.current) {
+        const bgColorHex = parseInt(backgroundColor.replace('#', ''), 16);
+        viewerSceneRef.current.setSceneConfig(sceneWidth, sceneHeight, bgColorHex);
+      }
+      
       console.log("🎮 Phaser game ready");
       console.log("- UserPreloadSceneWrapper:", userPreloadSceneWrapperRef.current);
       console.log("- ViewerScene:", viewerSceneRef.current);
+      console.log("- Scene config:", { width: sceneWidth, height: sceneHeight, backgroundColor });
       
       // Start with ViewerScene active by default
       gameInstanceRef.current?.scene.start("ViewerScene");
@@ -513,7 +575,48 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
         gameInstanceRef.current = null;
       }
     };
-  }, []);
+  }, [sceneConfig]);
+
+  // Direct story execution in ViewerScene (optimization for stories without PreloadScene)
+  const executeDirectlyToViewerScene = useCallback(async () => {
+    if (!storyCode || !viewerSceneRef.current) {
+      console.log("⚠️ Cannot execute story directly - missing storyCode or ViewerScene reference");
+      return;
+    }
+
+    console.log("⚡ Executing story directly in ViewerScene (PreloadScene bypassed)");
+
+    try {
+      // Ensure ViewerScene is active
+      if (gameInstanceRef.current) {
+        const viewerSceneActive = gameInstanceRef.current.scene.isActive("ViewerScene");
+        if (!viewerSceneActive) {
+          console.log("⚡ Starting ViewerScene...");
+          gameInstanceRef.current.scene.stop("UserPreloadSceneWrapper");
+          gameInstanceRef.current.scene.start("ViewerScene");
+          
+          // Small delay to ensure scene transition is complete
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
+      // Execute story code directly in ViewerScene
+      if (viewerSceneRef.current && storyCode) {
+        const actualStoryCode = storyCode.fn;
+        console.log("⚡ Executing story code directly in ViewerScene");
+        await viewerSceneRef.current.executeStoryCode(
+          actualStoryCode,
+          storyArgs,
+          storyPlay,
+          onPlayLog,
+          onPlayStart,
+        );
+      }
+
+    } catch (error) {
+      console.error("❌ Error in direct ViewerScene execution:", error);
+    }
+  }, [storyCode, storyArgs, storyPlay, onPlayLog, onPlayStart]);
 
   // Story execution with UserPreloadSceneWrapper → ViewerScene flow
   const executeStoryWithPreload = useCallback(async () => {
@@ -525,6 +628,40 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
     // Skip story execution if play function is executing to prevent flickering
     if (viewerSceneRef.current.isPlayFunctionExecuting) {
       console.log("🚫 Skipping executeStoryWithPreload - play function is executing");
+      return;
+    }
+
+    // ⚡ Step 3: Performance Optimization - Streamlined execution context
+    const executionContext = {
+      hasPreloadScene: !!preloadScene,
+      preloadSceneName: preloadScene?.name || 'N/A',
+      storyName: storyName || 'Unknown',
+      isPlayFunctionExecuting: viewerSceneRef.current.isPlayFunctionExecuting,
+      timestamp: Date.now()
+    };
+    
+    // ⚡ Step 2: Skip Condition Branching Logic
+    const shouldSkipPreload = (context: typeof executionContext): boolean => {
+      // Skip PreloadScene if no PreloadScene is defined
+      if (!context.hasPreloadScene) {
+        console.log("⚡ Skip reason: No PreloadScene defined for this story");
+        return true;
+      }
+      
+      // Skip PreloadScene during play function execution to prevent interference
+      if (context.isPlayFunctionExecuting) {
+        console.log("⚡ Skip reason: Play function is currently executing");
+        return true;
+      }
+      
+      
+      return false;
+    };
+    
+    // Apply skip optimization
+    if (shouldSkipPreload(executionContext)) {
+      console.log("⚡ Skipping PreloadScene - executing directly in ViewerScene");
+      executeDirectlyToViewerScene();
       return;
     }
 
@@ -574,7 +711,7 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
     } catch (error) {
       console.error("❌ Error in UserPreloadSceneWrapper → ViewerScene flow:", error);
     }
-  }, [storyCode, storyArgs, preloadScene, onPlayLog, onPlayStart, storyPlay]);
+  }, [storyCode, storyArgs, preloadScene, onPlayLog, onPlayStart, storyPlay, storyName, executeDirectlyToViewerScene]);
 
   useEffect(() => {
     console.log("PhaserPreview useEffect triggered with:");
@@ -593,13 +730,6 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
 
   // Listen for test results and component reset events
   useEffect(() => {
-    const handleTestResult = (event: CustomEvent) => {
-      setTestResults(prev => [...prev, event.detail]);
-    };
-
-    const handleTestResultsCleared = () => {
-      setTestResults([]);
-    };
 
     const handleComponentStateReset = () => {
       console.log("🔄 Received component state reset request");
@@ -610,28 +740,45 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
         return;
       }
       
-      // Re-execute the story to reset component state using new flow
-      if (storyCode && userPreloadSceneWrapperRef.current && viewerSceneRef.current) {
-        console.log("🔄 Re-executing story via PreloadScene → ViewerScene flow");
-        setTimeout(() => {
-          executeStoryWithPreload();
-        }, 100);
+      // Apply the same optimization logic for reset
+      const resetContext = {
+        hasPreloadScene: !!preloadScene,
+        preloadSceneName: preloadScene?.name || 'N/A',
+        storyName: storyName || 'Unknown',
+        isPlayFunctionExecuting: viewerSceneRef.current?.isPlayFunctionExecuting || false,
+        timestamp: Date.now()
+      };
+      
+      // Re-execute the story to reset component state using optimized flow
+      if (storyCode && viewerSceneRef.current) {
+        if (!resetContext.hasPreloadScene) {
+          console.log("🔄 Re-executing story via direct ViewerScene flow (optimized)");
+          setTimeout(() => {
+            executeDirectlyToViewerScene();
+          }, 100);
+        } else if (userPreloadSceneWrapperRef.current) {
+          console.log("🔄 Re-executing story via PreloadScene → ViewerScene flow");
+          setTimeout(() => {
+            executeStoryWithPreload();
+          }, 100);
+        }
       }
     };
 
-    window.addEventListener('testResult', handleTestResult as EventListener);
-    window.addEventListener('testResultsCleared', handleTestResultsCleared);
     window.addEventListener('resetComponentState', handleComponentStateReset);
 
     return () => {
-      window.removeEventListener('testResult', handleTestResult as EventListener);
-      window.removeEventListener('testResultsCleared', handleTestResultsCleared);
       window.removeEventListener('resetComponentState', handleComponentStateReset);
     };
-  }, [storyCode, storyArgs, preloadScene, executeStoryWithPreload]);
+  }, [storyCode, storyArgs, preloadScene, storyName, executeStoryWithPreload, executeDirectlyToViewerScene]);
 
-  const handlePlayClick = async () => {
-    console.log("🚀 Play button clicked!");
+  const executePlayFunction = async () => {
+    console.log("🚀 Play function execution started!");
+    
+    // ⚡ Performance: Streamlined play function execution
+    const hasPreloadScene = !!preloadScene;
+    console.log(`⚡ Play execution: ${storyName || 'Unknown'} (PreloadScene: ${hasPreloadScene ? 'Yes' : 'No'})`);
+    
     console.log("🚀 viewerSceneRef.current:", viewerSceneRef.current);
     console.log("🚀 storyPlay:", storyPlay);
     console.log("🚀 storyPlay type:", typeof storyPlay);
@@ -653,9 +800,16 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
       // Reset component first
       await viewerSceneRef.current.resetComponentStateSync();
       
-      // Re-execute story via PreloadScene → ViewerScene flow
+      // Re-execute story using optimized flow
       if (storyCode) {
-        await executeStoryWithPreload();
+        // Apply the same optimization logic for play function execution
+        if (!preloadScene) {
+          console.log("🔄 Re-executing story via direct ViewerScene flow (optimized) before play");
+          await executeDirectlyToViewerScene();
+        } else {
+          console.log("🔄 Re-executing story via PreloadScene → ViewerScene flow before play");
+          await executeStoryWithPreload();
+        }
       }
       
       // Small delay to ensure reset and recreation is complete
@@ -676,50 +830,39 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
     }
   };
 
-  // Calculate test result statistics
-  const testStats = testResults.reduce(
-    (acc, result) => {
-      if (result.status === 'pass') {
-        acc.passed++;
-      } else {
-        acc.failed++;
-      }
-      acc.total++;
-      return acc;
-    },
-    { passed: 0, failed: 0, total: 0 }
-  );
+  const handleSidebarPlayRequest = useCallback(async () => {
+    console.log("🎮 Received sidebar play request");
+    await executePlayFunction();
+  }, [executePlayFunction]);
+
+  // Listen for sidebar play requests
+  useEffect(() => {
+    window.addEventListener('sidebarPlayRequest', handleSidebarPlayRequest);
+    return () => {
+      window.removeEventListener('sidebarPlayRequest', handleSidebarPlayRequest);
+    };
+  }, [handleSidebarPlayRequest]);
+
 
   return (
     <div className="phaser-preview">
       <div className="preview-header">
         <div className="header-left">
           <h2>{storyName || "Phaser Preview"}</h2>
-          {testStats.total > 0 && (
-            <div className="test-badges">
-              {testStats.passed > 0 && (
-                <span className="test-badge success">
-                  ✅ {testStats.passed} Passed
-                </span>
-              )}
-              {testStats.failed > 0 && (
-                <span className="test-badge failed">
-                  ❌ {testStats.failed} Failed
-                </span>
-              )}
-            </div>
-          )}
         </div>
-        {storyPlay && (
-          <button 
-            className="play-button" 
-            onClick={handlePlayClick}
-          >
-            ▶ Play
-          </button>
-        )}
       </div>
-      <div ref={gameRef} className="game-container" />
+      <div 
+        ref={gameRef} 
+        className="game-container"
+        style={{
+          transform: `scale(${sceneDisplayConfig.displayScale})`,
+          transformOrigin: 'center center',
+          width: `${sceneDisplayConfig.width}px`,
+          height: `${sceneDisplayConfig.height}px`,
+          maxWidth: '100%',
+          maxHeight: '100%'
+        }}
+      />
       <style>{`
         .phaser-preview {
           display: flex;
@@ -744,48 +887,19 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
           color: #fff;
           font-size: 18px;
         }
-        .test-badges {
-          display: flex;
-          gap: 8px;
-        }
-        .test-badge {
-          padding: 4px 8px;
-          border-radius: 12px;
-          font-size: 12px;
-          font-weight: 500;
-          white-space: nowrap;
-        }
-        .test-badge.success {
-          background: #28a745;
-          color: white;
-        }
-        .test-badge.failed {
-          background: #dc3545;
-          color: white;
-        }
-        .play-button {
-          background: #007acc;
-          color: white;
-          border: none;
-          padding: 8px 16px;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 14px;
-          font-weight: 500;
-          transition: background-color 0.2s;
-        }
-        .play-button:hover {
-          background: #005a9e;
-        }
-        .play-button:active {
-          background: #004578;
-        }
         .game-container {
           flex: 1;
           display: flex;
           justify-content: center;
           align-items: center;
           background: #000;
+          overflow: hidden;
+          position: relative;
+        }
+        .game-container canvas {
+          display: block;
+          border: 1px solid #333;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.3);
         }
       `}</style>
     </div>

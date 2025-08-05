@@ -6,9 +6,15 @@ import { StoryGroup } from "./components/Sidebar";
 
 interface AppProps {
   userStoryModules?: Record<string, unknown>;
+  sceneConfig?: {
+    width?: number;
+    height?: number;
+    backgroundColor?: string;
+    displayScale?: number;
+  };
 }
 
-function App({ userStoryModules }: AppProps) {
+function App({ userStoryModules, sceneConfig }: AppProps) {
   const [storyGroups, setStoryGroups] = useState<StoryGroup[]>([]);
   const [selectedStory, setSelectedStory] = useState<{
     group: number;
@@ -25,6 +31,11 @@ function App({ userStoryModules }: AppProps) {
   // Use useRef instead of useState to store preloadScene class
   const preloadSceneRef = useRef<(new () => Phaser.Scene) | null>(null);
   const [playLogs, setPlayLogs] = useState<string[]>([]);
+  const [testResults, setTestResults] = useState<Array<{
+    name: string;
+    status: 'pass' | 'fail';
+    message: string;
+  }>>([]);
 
   useEffect(() => {
     async function loadStories() {
@@ -39,6 +50,9 @@ function App({ userStoryModules }: AppProps) {
       // Select first story by default
       if (groups.length > 0 && groups[0].stories.length > 0) {
         const firstStory = groups[0].stories[0];
+        
+        // Clear play logs for initial story load
+        setPlayLogs([]);
         
         console.log("🏁 Initial story loading:", firstStory.name);
         console.log("🏁 Initial play function type:", typeof firstStory.play);
@@ -69,16 +83,32 @@ function App({ userStoryModules }: AppProps) {
       setPlayLogs(prev => [...prev, event.detail]);
     };
 
+    // Listen for test result events
+    const handleTestResultEvent = (event: CustomEvent) => {
+      setTestResults(prev => [...prev, event.detail]);
+    };
+
+    const handleTestResultsClearedEvent = () => {
+      setTestResults([]);
+    };
+
     window.addEventListener('playLog', handlePlayLogEvent as EventListener);
+    window.addEventListener('testResult', handleTestResultEvent as EventListener);
+    window.addEventListener('testResultsCleared', handleTestResultsClearedEvent);
 
     return () => {
       window.removeEventListener('playLog', handlePlayLogEvent as EventListener);
+      window.removeEventListener('testResult', handleTestResultEvent as EventListener);
+      window.removeEventListener('testResultsCleared', handleTestResultsClearedEvent);
     };
   }, [userStoryModules]);
 
   const handleStorySelect = useCallback((groupIndex: number, storyIndex: number) => {
     setSelectedStory({ group: groupIndex, story: storyIndex });
     const story = storyGroups[groupIndex].stories[storyIndex];
+    
+    // Clear play logs when switching to a different demo
+    setPlayLogs([]);
     
     console.log("🔄 Story selected:", story.name);
     console.log("🔄 Story play function type:", typeof story.play);
@@ -108,12 +138,46 @@ function App({ userStoryModules }: AppProps) {
     setPlayLogs([]);
   }, []);
 
+  const handlePlayStory = useCallback(async (groupIndex: number, storyIndex: number) => {
+    // First select the story if it's not already selected
+    if (selectedStory?.group !== groupIndex || selectedStory?.story !== storyIndex) {
+      handleStorySelect(groupIndex, storyIndex);
+      // Wait a bit for the story to be loaded
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    // Then execute the play function
+    const story = storyGroups[groupIndex]?.stories[storyIndex];
+    if (story?.play) {
+      // Clear previous logs
+      setPlayLogs([]);
+      
+      // Dispatch a custom event to trigger the play function in PhaserPreview
+      window.dispatchEvent(new CustomEvent('sidebarPlayRequest'));
+    }
+  }, [selectedStory, storyGroups, handleStorySelect]);
+
+  // Calculate test result statistics
+  const testStats = testResults.reduce(
+    (acc, result) => {
+      if (result.status === 'pass') {
+        acc.passed++;
+      } else {
+        acc.failed++;
+      }
+      acc.total++;
+      return acc;
+    },
+    { passed: 0, failed: 0, total: 0 }
+  );
+
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
       <Sidebar
         storyGroups={storyGroups}
         selectedStory={selectedStory}
         onStorySelect={handleStorySelect}
+        onPlayStory={handlePlayStory}
       />
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         <div style={{ flex: 1, minHeight: 0 }}>
@@ -125,6 +189,7 @@ function App({ userStoryModules }: AppProps) {
             storyPlay={storyPlayRef.current}
             onPlayLog={handlePlayLog}
             onPlayStart={handlePlayStart}
+            sceneConfig={sceneConfig}
           />
         </div>
         <div
@@ -144,9 +209,42 @@ function App({ userStoryModules }: AppProps) {
               color: "#fff",
               fontSize: "14px",
               fontWeight: "500",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px"
             }}
           >
-            Play Logs
+            <span>Play Logs</span>
+            {testStats.total > 0 && (
+              <div style={{ display: "flex", gap: "8px" }}>
+                {testStats.passed > 0 && (
+                  <span style={{
+                    padding: "4px 8px",
+                    borderRadius: "12px",
+                    fontSize: "12px",
+                    fontWeight: "500",
+                    whiteSpace: "nowrap",
+                    background: "#28a745",
+                    color: "white"
+                  }}>
+                    ✅ {testStats.passed} Passed
+                  </span>
+                )}
+                {testStats.failed > 0 && (
+                  <span style={{
+                    padding: "4px 8px",
+                    borderRadius: "12px",
+                    fontSize: "12px",
+                    fontWeight: "500",
+                    whiteSpace: "nowrap",
+                    background: "#dc3545",
+                    color: "white"
+                  }}>
+                    ❌ {testStats.failed} Failed
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           <div
             style={{
@@ -161,8 +259,8 @@ function App({ userStoryModules }: AppProps) {
           >
             {playLogs.length === 0 ? (
               <div style={{ color: "#666", fontStyle: "italic" }}>
-                No play logs yet. Select a story with a play function to see
-                logs here.
+                No play logs yet. Click the Play button to execute tests and see
+                logs here. Logs are cleared when switching demos.
               </div>
             ) : (
               playLogs.map((log, index) => (

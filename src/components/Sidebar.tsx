@@ -20,12 +20,14 @@ interface SidebarProps {
   storyGroups: StoryGroup[];
   selectedStory: { group: number; story: number } | null;
   onStorySelect: (groupIndex: number, storyIndex: number) => void;
+  onPlayStory?: (groupIndex: number, storyIndex: number) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   storyGroups,
   selectedStory,
   onStorySelect,
+  onPlayStory,
 }) => {
   // 各グループの開閉状態を管理（デフォルトは全て開いている）
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(
@@ -73,21 +75,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
               {isExpanded && (
                 <div className="stories">
-                  {group.stories.map((story, storyIndex) => (
-                    <button
-                      key={storyIndex}
-                      className={`story-item ${
-                        selectedStory?.group === groupIndex &&
-                        selectedStory?.story === storyIndex
-                          ? "selected"
-                          : ""
-                      }`}
-                      onClick={() => onStorySelect(groupIndex, storyIndex)}
-                    >
-                      <span className="story-icon">📄</span>
-                      <span className="story-name">{story.name}</span>
-                    </button>
-                  ))}
+                  {group.stories.map((story, storyIndex) => {
+                    const isSelected = selectedStory?.group === groupIndex && selectedStory?.story === storyIndex;
+                    const hasPlayFunction = !!story.play;
+                    
+                    return (
+                      <div key={storyIndex} className="story-wrapper">
+                        <button
+                          className={`story-item ${isSelected ? "selected" : ""}`}
+                          onClick={() => onStorySelect(groupIndex, storyIndex)}
+                        >
+                          <span className="story-icon">📄</span>
+                          <span className="story-name">{story.name}</span>
+                        </button>
+                        {hasPlayFunction && onPlayStory && (
+                          <button
+                            className="play-button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onPlayStory(groupIndex, storyIndex);
+                            }}
+                            title="Run play function"
+                          >
+                            ▶
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -177,6 +192,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           flex-direction: column;
           animation: fadeIn 0.2s ease-out;
         }
+        
+        .story-wrapper {
+          display: flex;
+          align-items: center;
+          margin: 0 8px;
+          border-radius: 4px;
+        }
 
         @keyframes fadeIn {
           from {
@@ -200,8 +222,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           font-size: 13px;
           display: flex;
           align-items: center;
-          margin: 0 8px;
           border-radius: 4px;
+          flex: 1;
         }
         
         .story-item:hover {
@@ -225,6 +247,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
         
         .story-name {
           flex: 1;
+        }
+        
+        .play-button {
+          background: #007acc;
+          border: none;
+          color: white;
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          cursor: pointer;
+          font-size: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-left: 8px;
+          margin-right: 8px;
+          transition: all 0.2s;
+          opacity: 0.7;
+        }
+        
+        .play-button:hover {
+          background: #005a9e;
+          opacity: 1;
+          transform: scale(1.1);
+        }
+        
+        .story-wrapper:hover .play-button {
+          opacity: 1;
         }
       `}</style>
     </div>

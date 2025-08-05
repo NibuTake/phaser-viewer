@@ -35,12 +35,13 @@ async function runCommand() {
         const esbuild = await import('esbuild');
         const { outputFiles } = await esbuild.build({
           entryPoints: [configPath],
-          bundle: false,
+          bundle: true,
           platform: 'node',
           format: 'esm',
           target: 'node18',
           write: false,
           outdir: '.',
+          external: ['phaser', 'phaser-viewer']
         });
         
         // Execute the compiled JavaScript
@@ -67,7 +68,39 @@ async function runCommand() {
       console.log('📄 Using default configuration');
     }
   } else {
-    console.log('📄 No config file found, using defaults');
+    console.log('📄 No config file found, generating default configuration...');
+    
+    // Generate default phaser-viewer.config.ts
+    const defaultConfigContent = `import { PhaserViewerConfig } from 'phaser-viewer';
+
+const config: PhaserViewerConfig = {
+  // Path pattern for demo files (relative to project root)
+  filePath: './src/**/*.demo.ts',
+
+  // Port for development server (optional)
+  port: 5173,
+
+  // Scene configuration (optional)
+  scene: {
+    width: 800,    // Canvas width in pixels
+    height: 600,   // Canvas height in pixels
+    backgroundColor: '#222222', // Background color
+    displayScale: 1.0 // Display scale factor (0.1-2.0, or omit for auto)
+  }
+};
+
+export default config;
+`;
+    
+    try {
+      writeFileSync('./phaser-viewer.config.ts', defaultConfigContent);
+      console.log('✅ Generated default config: phaser-viewer.config.ts');
+      console.log('🔧 Loaded user config:', { filePath: './src/**/*.demo.ts', port: 5173, scene: { width: 800, height: 600, backgroundColor: '#222222' } });
+      userConfig = { filePath: './src/**/*.demo.ts', port: 5173, scene: { width: 800, height: 600, backgroundColor: '#222222' } };
+    } catch (error) {
+      console.warn('⚠️ Failed to generate config file:', error.message);
+      console.log('📄 Using default configuration');
+    }
   }
   
   // Check if filePath pattern matches any files
@@ -122,6 +155,7 @@ export default defineConfig({
 </html>`;
 
   // Generate main.tsx in project directory
+  const sceneConfigStr = userConfig.scene ? `sceneConfig={${JSON.stringify(userConfig.scene)}}` : '';
   const mainTsx = `import { StrictMode } from 'react';
 import ReactDOM from 'react-dom';
 import { PhaserViewer } from 'phaser-viewer';
@@ -133,7 +167,10 @@ console.log('🔍 User project story modules found:', Object.keys(userStoryModul
 
 ReactDOM.render(
   <StrictMode>
-    <PhaserViewer userStoryModules={userStoryModules} />
+    <PhaserViewer 
+      userStoryModules={userStoryModules}${sceneConfigStr ? ` 
+      ${sceneConfigStr}` : ''} 
+    />
   </StrictMode>,
   document.getElementById('root')
 );`;
@@ -154,6 +191,16 @@ ReactDOM.render(
   console.log('🔧 Configuration:');
   console.log('- Demo files pattern:', userConfig.filePath);
   console.log('- Port:', port);
+  if (userConfig.scene) {
+    console.log('- Scene width:', userConfig.scene.width || 800);
+    console.log('- Scene height:', userConfig.scene.height || 600);
+    console.log('- Background color:', userConfig.scene.backgroundColor || '#222222');
+    if (userConfig.scene.displayScale !== undefined) {
+      console.log('- Display scale:', userConfig.scene.displayScale);
+    } else {
+      console.log('- Display scale: auto (responsive)');
+    }
+  }
   
   const vite = spawn('npx', ['vite', '--config', tempConfigPath, '--port', port.toString()], {
     stdio: 'inherit',

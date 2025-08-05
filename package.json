@@ -1,6 +1,6 @@
 {
   "name": "phaser-viewer",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "description": "A Storybook-like development environment for Phaser 3 components with interactive testing",
   "keywords": [
     "phaser",
