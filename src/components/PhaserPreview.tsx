@@ -503,9 +503,11 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
       }
       
       // Auto-calculate based on available space
-      // Assume sidebar takes ~300px, leave some margin
-      const availableWidth = window.innerWidth - 350;
-      const availableHeight = window.innerHeight - 250; // Header + logs panel
+      // Sidebar: 320px + margins, logs panel: ~250px
+      const sidebarWidth = 320;
+      const margin = 40; // Additional margin for safety
+      const availableWidth = Math.max(400, window.innerWidth - sidebarWidth - margin);
+      const availableHeight = Math.max(300, window.innerHeight - 280); // Header + logs panel + margins
       
       const scaleX = availableWidth / sceneWidth;
       const scaleY = availableHeight / sceneHeight;
@@ -513,7 +515,7 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
       // Use the smaller scale to fit both dimensions, max 1.0 to avoid upscaling
       const autoScale = Math.min(scaleX, scaleY, 1.0);
       
-      return Math.max(0.3, autoScale); // Minimum 30% scale
+      return Math.max(0.2, autoScale); // Minimum 20% scale to accommodate large scenes
     };
     
     const displayScale = calculateDisplayScale();

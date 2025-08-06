@@ -112,7 +112,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <style>{`
         .sidebar {
-          width: 300px;
+          width: 320px;
+          min-width: 320px;
+          max-width: 400px;
           height: 100vh;
           background: #1e1e1e;
           border-right: 1px solid #333;

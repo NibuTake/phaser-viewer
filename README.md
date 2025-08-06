@@ -9,7 +9,7 @@
   </p>
   
   <p>
-    <img src="https://img.shields.io/badge/version-v0.1.5-blue?style=flat-square" alt="Version 0.1.5" />
+    <img src="https://img.shields.io/badge/version-v0.1.6-blue?style=flat-square" alt="Version 0.1.6" />
     <img src="https://img.shields.io/badge/phaser-v3.90.0-blue?style=flat-square&logo=gamepad" alt="Phaser 3.90.0" />
     <img src="https://img.shields.io/badge/typescript-5.9+-blue?style=flat-square&logo=typescript" alt="TypeScript 5.9+" />
     <img src="https://img.shields.io/badge/node-v18+-green?style=flat-square&logo=node.js" alt="Node.js 18+" />
@@ -22,7 +22,6 @@
 </div>
 
 ---
-
 
 ## ✨ Features
 
@@ -143,6 +142,7 @@ your-project/
 │   ├── Button.demo.ts    # Button component demos
 │   ├── Sprite.ts         # Sprite component implementation
 │   └── Sprite.demo.ts    # Sprite component demos
+├── .phaser-viewer-temp/   # Hidden temp files (auto-generated)
 └── package.json          # Include phaser-viewer script
 ```
 
@@ -346,6 +346,7 @@ export default config;
 - Automatically loads `phaser-viewer.config.ts` or `phaser-viewer.config.js`
 - Generates default configuration file if none exists
 - Supports scene customization (size, background color)
+- Auto-adds `.phaser-viewer-temp/` to `.gitignore` when present
 
 
 ---

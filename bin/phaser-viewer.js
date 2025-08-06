@@ -3,7 +3,7 @@
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { readFileSync, existsSync, writeFileSync, mkdirSync, unlinkSync } from 'fs';
+import { readFileSync, existsSync, writeFileSync, mkdirSync, unlinkSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { createHash } from 'crypto';
 
@@ -141,7 +141,22 @@ export default config;
     process.exit(1);
   }
 
-  console.log('📄 Generating temporary files in project directory...');
+  console.log('📄 Generating temporary files in hidden directory...');
+  
+  // Create hidden temp directory
+  const tempDir = './.phaser-viewer-temp';
+  mkdirSync(tempDir, { recursive: true });
+  
+  // Auto-add to .gitignore if it exists and entry is missing
+  const gitignorePath = './.gitignore';
+  const gitignoreEntry = '# Phaser Viewer temporary files\n.phaser-viewer-temp/\n';
+  if (existsSync(gitignorePath)) {
+    const gitignoreContent = readFileSync(gitignorePath, 'utf8');
+    if (!gitignoreContent.includes('.phaser-viewer-temp')) {
+      writeFileSync(gitignorePath, gitignoreContent + '\n' + gitignoreEntry);
+      console.log('✅ Added .phaser-viewer-temp/ to .gitignore');
+    }
+  }
   
   // Generate vite config in user project directory  
   const publicDirPath = join(__dirname, '..', 'dist').replace(/\\/g, '/');
@@ -152,6 +167,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  root: '${tempDir}',
   publicDir: '${publicDirPath}',
   optimizeDeps: {
     include: ['phaser', 'react', 'react-dom'],
@@ -164,7 +180,7 @@ export default defineConfig({
   },
   server: {
     fs: {
-      allow: ['.', '${packagePath}']
+      allow: ['..', '${packagePath}']
     }
   }
 })`;
@@ -190,8 +206,8 @@ export default defineConfig({
 import ReactDOM from 'react-dom';
 import { PhaserViewer } from 'phaser-viewer';
 
-// Auto-discover user demo files using the configured pattern
-const userStoryModules = import.meta.glob('${userConfig.filePath}', { eager: true });
+// Auto-discover user demo files using the configured pattern (relative to project root)
+const userStoryModules = import.meta.glob('../${userConfig.filePath}', { eager: true });
 
 console.log('🔍 User project story modules found:', Object.keys(userStoryModules));
 
@@ -205,13 +221,13 @@ ReactDOM.render(
   document.getElementById('root')
 );`;
 
-  // Write temporary files to user project (will be cleaned up)
-  writeFileSync('./index.html', indexHtml);
-  writeFileSync('./phaser-viewer-main.tsx', mainTsx);
-  writeFileSync('./phaser-viewer.config.temp.js', viteConfig);
+  // Write temporary files to hidden directory (will be cleaned up)
+  writeFileSync(`${tempDir}/index.html`, indexHtml);
+  writeFileSync(`${tempDir}/phaser-viewer-main.tsx`, mainTsx);
+  writeFileSync(`${tempDir}/phaser-viewer.config.temp.js`, viteConfig);
 
   // Use the generated config
-  const tempConfigPath = './phaser-viewer.config.temp.js';
+  const tempConfigPath = `${tempDir}/phaser-viewer.config.temp.js`;
   
   // Start Vite dev server from project directory
   console.log('🔧 Starting Phaser Viewer...');
@@ -242,14 +258,9 @@ ReactDOM.render(
   const cleanup = () => {
     console.log('🧹 Cleaning up temporary files...');
     try {
-      if (existsSync('./index.html')) {
-        unlinkSync('./index.html');
-      }
-      if (existsSync('./phaser-viewer-main.tsx')) {
-        unlinkSync('./phaser-viewer-main.tsx');
-      }
-      if (existsSync('./phaser-viewer.config.temp.js')) {
-        unlinkSync('./phaser-viewer.config.temp.js');
+      if (existsSync(tempDir)) {
+        // Remove entire temp directory
+        rmSync(tempDir, { recursive: true, force: true });
       }
       if (existsSync('./phaser-viewer.config.temp.mjs')) {
         unlinkSync('./phaser-viewer.config.temp.mjs');
@@ -329,7 +340,7 @@ async function runTestMode() {
 import * as Phaser from 'phaser';
 
 // Simple test runner for demo files
-const demoModules = import.meta.glob('${userConfig.filePath}', { eager: true });
+const demoModules = import.meta.glob('../${userConfig.filePath}', { eager: true });
 
 // Play function test results tracking
 let totalPlayTests = 0;
@@ -549,8 +560,12 @@ Object.entries(demoModules).forEach(([filePath, module]) => {
 
 `;
 
+  // Create hidden temp directory for test files
+  const tempDir = './.phaser-viewer-temp';
+  mkdirSync(tempDir, { recursive: true });
+
   // Write simplified test script
-  const testScriptPath = './phaser-viewer.test.js';
+  const testScriptPath = `${tempDir}/phaser-viewer.test.js`;
   writeFileSync(testScriptPath, testScriptContent);
 
   // Generate minimal Vitest config
@@ -568,7 +583,7 @@ export default defineConfig({
         }
       ],
     },
-    include: ['./phaser-viewer.test.js'],
+    include: ['${tempDir}/phaser-viewer.test.js'],
     testTimeout: 30000,
     hookTimeout: 10000,
     globals: true,
@@ -577,14 +592,14 @@ export default defineConfig({
   },
   server: {
     fs: {
-      allow: ['.', process.cwd()]
+      allow: ['..', '${process.cwd()}']
     }
   },
   logLevel: 'info',
 });`;
 
   // Write Vitest config
-  const vitestConfigPath = './phaser-viewer.vitest.config.js';
+  const vitestConfigPath = `${tempDir}/phaser-viewer.vitest.config.js`;
   writeFileSync(vitestConfigPath, vitestConfigContent);
   
   // Install necessary test dependencies if not available
@@ -655,11 +670,8 @@ export default defineConfig({
   // Cleanup function for test mode (silent)
   const cleanupTest = () => {
     try {
-      if (existsSync(vitestConfigPath)) {
-        unlinkSync(vitestConfigPath);
-      }
-      if (existsSync(testScriptPath)) {
-        unlinkSync(testScriptPath);
+      if (existsSync(tempDir)) {
+        rmSync(tempDir, { recursive: true, force: true });
       }
     } catch (error) {
       // Silent cleanup

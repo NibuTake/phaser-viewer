@@ -173,13 +173,15 @@ function App({ userStoryModules, sceneConfig }: AppProps) {
 
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
-      <Sidebar
-        storyGroups={storyGroups}
-        selectedStory={selectedStory}
-        onStorySelect={handleStorySelect}
-        onPlayStory={handlePlayStory}
-      />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+      <div style={{ flexShrink: 0 }}>
+        <Sidebar
+          storyGroups={storyGroups}
+          selectedStory={selectedStory}
+          onStorySelect={handleStorySelect}
+          onPlayStory={handlePlayStory}
+        />
+      </div>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         <div style={{ flex: 1, minHeight: 0 }}>
           <PhaserPreview
             storyCode={storyCode}
