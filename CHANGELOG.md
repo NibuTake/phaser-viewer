@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.7] - 2025-01-08
+
+### ✨ Added
+- **🔄 Component Reset Button**: Added reset functionality in preview header to restore components to initial create state
+- **🖼️ User Asset Support**: Implemented custom Vite plugin for serving user static assets (img/, assets/ directories)
+- **🧹 Hidden Temp Directory**: Uses `.phaser-viewer-temp/` directory to keep project root clean and organized
+- **🎯 Enhanced Type Inference**: Improved `Demo<typeof meta, Args>` pattern with better `ComponentFromMeta` type resolution
+
+### 🔧 Fixed
+- **Asset Loading Issues**: Resolved PreloadScene asset loading failures by implementing custom asset middleware
+- **Vite Configuration**: Fixed duplicate plugins key causing server restart failures and build errors
+- **TypeScript Types**: Fixed type inference issues for component parameters in play functions
+- **Static Asset Serving**: Gold and other components with assets now display correctly in browser
+
+### 🚀 Improved
+- **User Experience**: Reset button preserves Play test results while allowing component state restoration
+- **Performance**: Optimized Vite configuration for better asset serving and faster startup
+- **Development Workflow**: Cleaner project structure with automatic .gitignore management for temp files
+- **Error Handling**: Better error messages and debugging information for asset loading
+
+### 📚 Technical Details
+- Custom Vite middleware for `/img/` and `/assets/` routes
+- Improved component lifecycle management for reset functionality
+- Enhanced asset path resolution and content-type detection
+- Better separation of Play test state and component display state
+
 ## [0.1.2] - 2025-01-04
 
 ### 🚀 Major Fixes

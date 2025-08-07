@@ -5,7 +5,7 @@ export { default as Sidebar } from './components/Sidebar';
 export { loadStoryGroups, loadStoryGroupsFromModules, setupGlobalComponents } from './utils/storyLoader';
 
 // Types - Demo-based Meta and Demo system
-export interface Meta<T = unknown> {
+export interface Meta<T extends new (...args: any[]) => any = new (...args: any[]) => any> {
   component: T;
   title: string;
   description?: string;
@@ -16,13 +16,17 @@ export interface Meta<T = unknown> {
 
 // Helper type to extract component instance type from Meta
 export type ComponentFromMeta<TMeta> = TMeta extends { component: infer T }
-  ? T extends new (...args: unknown[]) => infer Instance 
-    ? Instance 
-    : never
+  ? T extends abstract new (...args: any[]) => infer Instance 
+    ? Instance
+    : T extends new (...args: any[]) => infer Instance 
+      ? Instance 
+      : T extends { prototype: infer P }
+        ? P
+        : any
   : never;
 
 // Improved Demo type with full type inference support
-export type Demo<TMeta extends Meta<unknown>, TArgs = unknown> = {
+export type Demo<TMeta extends Meta<any>, TArgs = unknown> = {
   name: string;
   args: TArgs;
   create: (scene: Phaser.Scene, args: TArgs) => ComponentFromMeta<TMeta>;
@@ -30,7 +34,7 @@ export type Demo<TMeta extends Meta<unknown>, TArgs = unknown> = {
 };
 
 // Helper function for defining demos with full type inference
-export function defineDemo<TMeta extends Meta<unknown>, TArgs>(
+export function defineDemo<TMeta extends Meta<any>, TArgs>(
   demo: {
     name: string;
     args: TArgs;
@@ -39,6 +43,18 @@ export function defineDemo<TMeta extends Meta<unknown>, TArgs>(
   }
 ): Demo<TMeta, TArgs> {
   return demo;
+}
+
+// Alternative helper function for easier type inference
+export function defineMeta<T extends new (...args: any[]) => any>(meta: {
+  component: T;
+  title: string;
+  description?: string;
+  tags?: string[];
+  parameters?: Record<string, unknown>;
+  preloadScene?: new () => Phaser.Scene;
+}): Meta<T> & { component: T } {
+  return meta as any;
 }
 
 // Legacy DemoObj interface for backward compatibility

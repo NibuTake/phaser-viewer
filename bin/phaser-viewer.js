@@ -166,7 +166,60 @@ export default config;
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      name: 'user-assets',
+      configureServer(server) {
+        const path = require('path');
+        const fs = require('fs');
+        
+        server.middlewares.use('/img', (req, res, next) => {
+          const filePath = path.join(process.cwd(), 'img', req.url);
+          if (fs.existsSync(filePath)) {
+            // Determine content type based on file extension
+            const ext = path.extname(filePath).toLowerCase();
+            const contentTypes = {
+              '.png': 'image/png',
+              '.jpg': 'image/jpeg',
+              '.jpeg': 'image/jpeg',
+              '.gif': 'image/gif',
+              '.webp': 'image/webp'
+            };
+            const contentType = contentTypes[ext] || 'application/octet-stream';
+            
+            res.setHeader('Content-Type', contentType);
+            fs.createReadStream(filePath).pipe(res);
+          } else {
+            next();
+          }
+        });
+        
+        // Handle other common asset directories
+        server.middlewares.use('/assets', (req, res, next) => {
+          const path = require('path');
+          const fs = require('fs');
+          const filePath = path.join(process.cwd(), 'assets', req.url);
+          if (fs.existsSync(filePath)) {
+            const ext = path.extname(filePath).toLowerCase();
+            const contentTypes = {
+              '.png': 'image/png',
+              '.jpg': 'image/jpeg',
+              '.jpeg': 'image/jpeg',
+              '.gif': 'image/gif',
+              '.webp': 'image/webp'
+            };
+            const contentType = contentTypes[ext] || 'application/octet-stream';
+            
+            res.setHeader('Content-Type', contentType);
+            fs.createReadStream(filePath).pipe(res);
+          } else {
+            next();
+          }
+        });
+      }
+    }
+  ],
   root: '${tempDir}',
   publicDir: '${publicDirPath}',
   optimizeDeps: {

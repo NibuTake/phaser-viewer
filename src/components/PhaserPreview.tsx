@@ -838,6 +838,29 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
     await executePlayFunction();
   }, [storyPlay, onPlayLog, onPlayStart, preloadScene, storyName, storyCode, executeDirectlyToViewerScene, executeStoryWithPreload]);
 
+  // Reset handler to restore component to initial create state
+  const handleReset = useCallback(async () => {
+    console.log("🔄 Reset button clicked - restoring to initial state");
+    
+    if (viewerSceneRef.current) {
+      // Reset component state to initial create state
+      await viewerSceneRef.current.resetComponentStateSync();
+      
+      // Re-execute story creation to restore initial state
+      if (storyCode) {
+        if (!preloadScene) {
+          console.log("🔄 Re-executing story via direct ViewerScene flow (reset)");
+          await executeDirectlyToViewerScene();
+        } else {
+          console.log("🔄 Re-executing story via PreloadScene → ViewerScene flow (reset)");
+          await executeStoryWithPreload();
+        }
+      }
+      
+      console.log("✅ Component reset to initial state completed");
+    }
+  }, [storyCode, preloadScene, executeDirectlyToViewerScene, executeStoryWithPreload]);
+
   // Listen for sidebar play requests
   useEffect(() => {
     window.addEventListener('sidebarPlayRequest', handleSidebarPlayRequest);
@@ -852,6 +875,15 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
       <div className="preview-header">
         <div className="header-left">
           <h2>{storyName || "Phaser Preview"}</h2>
+        </div>
+        <div className="header-right">
+          <button 
+            className="reset-button"
+            onClick={handleReset}
+            title="Reset component to initial state"
+          >
+            🔄 Reset
+          </button>
         </div>
       </div>
       <div 
@@ -885,10 +917,33 @@ const PhaserPreview: React.FC<PhaserPreviewProps> = ({
           align-items: center;
           gap: 16px;
         }
+        .header-right {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
         .preview-header h2 {
           margin: 0;
           color: #fff;
           font-size: 18px;
+        }
+        .reset-button {
+          background: #333;
+          color: #fff;
+          border: 1px solid #555;
+          border-radius: 4px;
+          padding: 8px 12px;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .reset-button:hover {
+          background: #444;
+          border-color: #666;
+        }
+        .reset-button:active {
+          background: #222;
+          transform: scale(0.98);
         }
         .game-container {
           flex: 1;

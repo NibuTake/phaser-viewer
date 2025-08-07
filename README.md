@@ -9,7 +9,7 @@
   </p>
   
   <p>
-    <img src="https://img.shields.io/badge/version-v0.1.6-blue?style=flat-square" alt="Version 0.1.6" />
+    <img src="https://img.shields.io/badge/version-v0.1.7-blue?style=flat-square" alt="Version 0.1.7" />
     <img src="https://img.shields.io/badge/phaser-v3.90.0-blue?style=flat-square&logo=gamepad" alt="Phaser 3.90.0" />
     <img src="https://img.shields.io/badge/typescript-5.9+-blue?style=flat-square&logo=typescript" alt="TypeScript 5.9+" />
     <img src="https://img.shields.io/badge/node-v18+-green?style=flat-square&logo=node.js" alt="Node.js 18+" />
@@ -53,6 +53,10 @@
   <tr>
     <td align="center">🎯</td>
     <td><strong>TypeScript First</strong><br/>Full type safety with automatic component and args inference using advanced TypeScript patterns</td>
+  </tr>
+  <tr>
+    <td align="center">🔄</td>
+    <td><strong>Component Reset</strong><br/>Reset button to restore components to initial state after Play tests while preserving test history</td>
   </tr>
 </table>
 
