@@ -5,7 +5,7 @@ export { default as Sidebar } from './components/Sidebar';
 export { loadStoryGroups, loadStoryGroupsFromModules, setupGlobalComponents } from './utils/storyLoader';
 
 // Types - Demo-based Meta and Demo system
-export interface Meta<T extends new (...args: any[]) => any = new (...args: any[]) => any> {
+export interface Meta<T extends new (...args: unknown[]) => unknown = new (...args: unknown[]) => unknown> {
   component: T;
   title: string;
   description?: string;
@@ -16,16 +16,17 @@ export interface Meta<T extends new (...args: any[]) => any = new (...args: any[
 
 // Helper type to extract component instance type from Meta
 export type ComponentFromMeta<TMeta> = TMeta extends { component: infer T }
-  ? T extends abstract new (...args: any[]) => infer Instance 
+  ? T extends abstract new (...args: unknown[]) => infer Instance 
     ? Instance
-    : T extends new (...args: any[]) => infer Instance 
+    : T extends new (...args: unknown[]) => infer Instance 
       ? Instance 
       : T extends { prototype: infer P }
         ? P
-        : any
+        : unknown
   : never;
 
 // Improved Demo type with full type inference support
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Demo<TMeta extends Meta<any>, TArgs = unknown> = {
   name: string;
   args: TArgs;
@@ -34,6 +35,7 @@ export type Demo<TMeta extends Meta<any>, TArgs = unknown> = {
 };
 
 // Helper function for defining demos with full type inference
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function defineDemo<TMeta extends Meta<any>, TArgs>(
   demo: {
     name: string;
@@ -46,7 +48,7 @@ export function defineDemo<TMeta extends Meta<any>, TArgs>(
 }
 
 // Alternative helper function for easier type inference
-export function defineMeta<T extends new (...args: any[]) => any>(meta: {
+export function defineMeta<T extends new (...args: unknown[]) => unknown>(meta: {
   component: T;
   title: string;
   description?: string;
@@ -54,7 +56,7 @@ export function defineMeta<T extends new (...args: any[]) => any>(meta: {
   parameters?: Record<string, unknown>;
   preloadScene?: new () => Phaser.Scene;
 }): Meta<T> & { component: T } {
-  return meta as any;
+  return meta as Meta<T> & { component: T };
 }
 
 // Legacy DemoObj interface for backward compatibility
