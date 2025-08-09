@@ -92,7 +92,23 @@ export interface PhaserViewerConfig {
     backgroundColor?: string;
     displayScale?: number; // Display scaling factor (0.1 - 2.0, default: auto)
   };
+  // TypeScript path alias support
+  typescript?: {
+    autoDetectPaths?: boolean; // Auto-detect from tsconfig.json (default: true)
+    tsconfigPath?: string; // Path to tsconfig.json (default: ./tsconfig.json)
+  };
+  // Vite configuration passthrough
+  vite?: {
+    resolve?: {
+      alias?: Array<{ find: string; replacement: string }> | Record<string, string>;
+    };
+    // Allow other Vite config options
+    [key: string]: unknown;
+  };
 }
+
+// Development utilities
+export { GridSystem } from './utils/GridSystem';
 
 // Test utilities re-exported for convenience
 export { expect, delay, step } from './utils/expect';

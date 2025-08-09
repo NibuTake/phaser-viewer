@@ -10,6 +10,67 @@ import { createHash } from 'crypto';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Helper function to detect TypeScript path aliases
+async function detectTypeScriptAliases() {
+  const tsconfigPath = join(process.cwd(), 'tsconfig.json');
+  
+  if (!existsSync(tsconfigPath)) {
+    return null;
+  }
+  
+  try {
+    const tsconfigContent = readFileSync(tsconfigPath, 'utf-8');
+    let tsconfig;
+    
+    // Try parsing the file as-is first
+    try {
+      tsconfig = JSON.parse(tsconfigContent);
+    } catch (parseError) {
+      // If parsing fails, fall back to simple comment removal
+      try {
+        // Remove comments and trailing commas with simpler regex
+        const cleanedContent = tsconfigContent
+          .replace(/\/\*[\s\S]*?\*\//g, '') // Remove /* */ comments
+          .replace(/\/\/.*$/gm, '')          // Remove // comments  
+          .replace(/,(\s*[}\]])/g, '$1');    // Remove trailing commas
+        
+        tsconfig = JSON.parse(cleanedContent);
+      } catch (fallbackError) {
+        // If still failing, log both errors and return null
+        console.warn('⚠️ Failed to parse tsconfig.json with error:', parseError.message);
+        console.warn('⚠️ Fallback parsing also failed:', fallbackError.message);
+        return null;
+      }
+    }
+    
+    if (tsconfig.compilerOptions?.paths) {
+      const baseUrl = tsconfig.compilerOptions.baseUrl || '.';
+      const paths = tsconfig.compilerOptions.paths;
+      const aliases = [];
+      
+      for (const [key, values] of Object.entries(paths)) {
+        // Convert TypeScript path pattern to Vite alias
+        // e.g., "@/*": ["src/*"] -> { find: "@/", replacement: "/absolute/path/to/src/" }
+        const find = key.replace('/*', '/');
+        const replacement = values[0].replace('/*', '/');
+        const absolutePath = join(process.cwd(), baseUrl, replacement);
+        
+        aliases.push({
+          find,
+          replacement: absolutePath
+        });
+      }
+      
+      console.log('🔍 Auto-detected TypeScript path aliases from tsconfig.json');
+      return aliases;
+    }
+  } catch (error) {
+    console.warn('⚠️ Failed to parse tsconfig.json:', error.message);
+  }
+  
+  return null;
+}
+
 async function runCommand() {
   const command = process.argv[2] || 'dev';
   
@@ -162,8 +223,48 @@ export default config;
   const publicDirPath = join(__dirname, '..', 'dist').replace(/\\/g, '/');
   const packagePath = join(__dirname, '..').replace(/\\/g, '/');
   
+  // Build resolve aliases from user config and auto-detected TypeScript aliases
+  let resolveAliases = `{
+      'react-dom/client': 'react-dom/client'`;
+  
+  // Auto-detect TypeScript path aliases unless explicitly disabled
+  if (userConfig.typescript?.autoDetectPaths !== false) {
+    const tsAliases = await detectTypeScriptAliases();
+    if (tsAliases) {
+      tsAliases.forEach(alias => {
+        const find = JSON.stringify(alias.find);
+        const replacement = JSON.stringify(alias.replacement);
+        resolveAliases += `,\n      ${find}: ${replacement}`;
+      });
+    }
+  }
+  
+  // Apply user-provided Vite aliases (these override auto-detected ones)
+  if (userConfig.vite?.resolve?.alias) {
+    const aliases = userConfig.vite.resolve.alias;
+    if (Array.isArray(aliases)) {
+      // Handle array format: [{ find: '@/', replacement: '/path/to/src/' }]
+      aliases.forEach(alias => {
+        const find = JSON.stringify(alias.find);
+        const replacement = JSON.stringify(alias.replacement);
+        resolveAliases += `,\n      ${find}: ${replacement}`;
+      });
+    } else if (typeof aliases === 'object') {
+      // Handle object format: { '@/': '/path/to/src/' }
+      Object.entries(aliases).forEach(([find, replacement]) => {
+        const key = JSON.stringify(find);
+        const value = JSON.stringify(replacement);
+        resolveAliases += `,\n      ${key}: ${value}`;
+      });
+    }
+  }
+  
+  resolveAliases += `\n    }`;
+
   const viteConfig = `import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'node:path'
+import fs from 'node:fs'
 
 export default defineConfig({
   plugins: [
@@ -171,9 +272,6 @@ export default defineConfig({
     {
       name: 'user-assets',
       configureServer(server) {
-        const path = require('path');
-        const fs = require('fs');
-        
         server.middlewares.use('/img', (req, res, next) => {
           const filePath = path.join(process.cwd(), 'img', req.url);
           if (fs.existsSync(filePath)) {
@@ -197,8 +295,6 @@ export default defineConfig({
         
         // Handle other common asset directories
         server.middlewares.use('/assets', (req, res, next) => {
-          const path = require('path');
-          const fs = require('fs');
           const filePath = path.join(process.cwd(), 'assets', req.url);
           if (fs.existsSync(filePath)) {
             const ext = path.extname(filePath).toLowerCase();
@@ -227,9 +323,7 @@ export default defineConfig({
     exclude: ['phaser-viewer']
   },
   resolve: {
-    alias: {
-      'react-dom/client': 'react-dom/client'
-    }
+    alias: ${resolveAliases}
   },
   server: {
     fs: {
@@ -259,7 +353,7 @@ export default defineConfig({
 import ReactDOM from 'react-dom';
 import { PhaserViewer } from 'phaser-viewer';
 
-// Auto-discover user demo files using the configured pattern (relative to project root)
+// Auto-discover user demo files using the configured pattern (relative to temp directory)  
 const userStoryModules = import.meta.glob('../${userConfig.filePath}', { eager: true });
 
 console.log('🔍 User project story modules found:', Object.keys(userStoryModules));

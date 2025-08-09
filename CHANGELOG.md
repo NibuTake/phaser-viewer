@@ -5,6 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.8] - 2025-01-08
+
+### ✨ Added
+- **📦 TypeScript Path Alias Support**: Automatic detection and resolution of TypeScript path aliases from tsconfig.json
+- **🔧 Enhanced Vite Configuration**: User-provided Vite configuration is now properly applied to the internal Vite instance
+- **🎯 Zero-Config Path Resolution**: Works out-of-the-box with existing TypeScript projects using path aliases
+
+### 🚀 Improved
+- **Better Project Compatibility**: Now supports modern TypeScript projects with path mappings (e.g., `@/` → `src/`)
+- **Flexible Configuration**: Three ways to configure aliases - auto-detection, manual Vite config, or TypeScript config options
+- **Developer Experience**: No need to rewrite imports when using phaser-viewer with existing codebases
+
+### 📚 Technical Details
+- Automatically reads `compilerOptions.paths` from tsconfig.json
+- Converts TypeScript path patterns to Vite aliases
+- Supports both array and object formats for alias configuration
+- User-provided aliases override auto-detected ones for fine control
+
+### 🔧 Configuration Examples
+```typescript
+// Zero config - auto-detects from tsconfig.json
+export default {
+  filePath: "./src/**/*.demo.ts"
+}
+
+// Manual control
+export default {
+  filePath: "./src/**/*.demo.ts",
+  typescript: {
+    autoDetectPaths: true, // default
+    tsconfigPath: "./tsconfig.json" // optional
+  }
+}
+
+// Vite config override
+export default {
+  filePath: "./src/**/*.demo.ts",
+  vite: {
+    resolve: {
+      alias: [
+        { find: "@/", replacement: "/absolute/path/to/src/" }
+      ]
+    }
+  }
+}
+```
+
 ## [0.1.7] - 2025-01-08
 
 ### ✨ Added

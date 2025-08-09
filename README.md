@@ -9,7 +9,7 @@
   </p>
   
   <p>
-    <img src="https://img.shields.io/badge/version-v0.1.7-blue?style=flat-square" alt="Version 0.1.7" />
+    <img src="https://img.shields.io/badge/version-v0.1.9-blue?style=flat-square" alt="Version 0.1.9" />
     <img src="https://img.shields.io/badge/phaser-v3.90.0-blue?style=flat-square&logo=gamepad" alt="Phaser 3.90.0" />
     <img src="https://img.shields.io/badge/typescript-5.9+-blue?style=flat-square&logo=typescript" alt="TypeScript 5.9+" />
     <img src="https://img.shields.io/badge/node-v18+-green?style=flat-square&logo=node.js" alt="Node.js 18+" />
@@ -57,6 +57,10 @@
   <tr>
     <td align="center">🔄</td>
     <td><strong>Component Reset</strong><br/>Reset button to restore components to initial state after Play tests while preserving test history</td>
+  </tr>
+  <tr>
+    <td align="center">📐</td>
+    <td><strong>Development Grid System</strong><br/>Smart square grid overlay that perfectly fits your scene size for precise component positioning and alignment</td>
   </tr>
 </table>
 
@@ -327,6 +331,47 @@ export default config;
 | `backgroundColor` | `string` | `'#222222'` | Background color in hex format |
 | `displayScale` | `number` | `auto` | Display scaling factor (0.1-2.0, or omit for responsive auto-scaling) |
 
+### TypeScript Path Alias Support
+
+Phaser Viewer automatically detects and resolves TypeScript path aliases from your `tsconfig.json`:
+
+```typescript
+// tsconfig.json
+{
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/utils/*": ["./src/utils/*"]
+    }
+  }
+}
+
+// Your demo files can use path aliases
+import { Button } from '@/components/Button';
+import { COLORS } from '@/utils/colors';
+```
+
+**Configuration Options:**
+```typescript
+// phaser-viewer.config.ts
+export default {
+  filePath: './src/**/*.demo.ts',
+  // Auto-detection is enabled by default
+  typescript: {
+    autoDetectPaths: true,  // Default: true
+    tsconfigPath: './tsconfig.json'  // Optional
+  },
+  // Or manually configure Vite aliases
+  vite: {
+    resolve: {
+      alias: [
+        { find: '@/', replacement: '/path/to/src/' }
+      ]
+    }
+  }
+}
+```
+
 
 
 ## 🛠️ Commands
@@ -352,6 +397,25 @@ export default config;
 - Supports scene customization (size, background color)
 - Auto-adds `.phaser-viewer-temp/` to `.gitignore` when present
 
+
+## 📐 Development Grid System
+
+Phaser Viewer includes a smart grid overlay system to help with precise component positioning during development:
+
+### Features
+- **Square Grid Cells**: Automatically calculates near-square grid cells for better visual alignment
+- **Perfect Scene Coverage**: Grid lines perfectly span your configured scene dimensions with no cutoff
+- **Adaptive Sizing**: Automatically adjusts to different screen sizes (100px, 120px, 80px target cells)
+- **Always Visible**: Grid appears in all demos for consistent development experience
+
+### How it Works
+For a 1920×1080 scene:
+- Calculates 19×11 divisions (targeting ~100px square cells)
+- Creates cells of 101.1×98.2px (nearly perfect squares)
+- 18 vertical + 10 horizontal lines provide complete coverage
+- No manual configuration needed - works automatically
+
+The grid system is enabled by default and helps developers align components precisely during development without any setup required.
 
 ---
 

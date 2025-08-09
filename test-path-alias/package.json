@@ -1,0 +1,12 @@
+{
+  "name": "test-path-alias",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "phaser-viewer": "phaser-viewer"
+  },
+  "dependencies": {
+    "phaser": "^3.70.0",
+    "phaser-viewer": "file:../phaser-viewer-0.1.8.tgz"
+  }
+}

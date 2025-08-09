@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import * as Phaser from "phaser";
+import { GridSystem } from "../utils/GridSystem";
 
 interface PhaserPreviewProps {
   storyCode: { fn: (scene: Phaser.Scene, args?: unknown) => unknown } | null;
@@ -116,6 +117,7 @@ class ViewerScene extends Phaser.Scene {
   private sceneWidth: number = 800;
   private sceneHeight: number = 600;
   private sceneBackgroundColor: number = 0x222222;
+  private gridSystem: GridSystem | null = null;
 
   constructor() {
     super({ key: "ViewerScene" });
@@ -135,11 +137,40 @@ class ViewerScene extends Phaser.Scene {
     // Clear previous objects
     this.children.removeAll();
 
-    // Add background
-    this.add.rectangle(this.sceneWidth / 2, this.sceneHeight / 2, this.sceneWidth, this.sceneHeight, this.sceneBackgroundColor);
+    // Add background (behind grid at depth -1000)
+    const background = this.add.rectangle(this.sceneWidth / 2, this.sceneHeight / 2, this.sceneWidth, this.sceneHeight, this.sceneBackgroundColor);
+    background.setDepth(-2000);
+
+    // Always create fresh GridSystem for simplicity
+    this.createGridSystem();
 
     // Removed default text to make interactions more visible
     // Components will be created by story code instead
+  }
+
+  private createGridSystem() {
+    console.log("🟩 Creating fresh GridSystem");
+    
+    // Clean up previous GridSystem if it exists
+    if (this.gridSystem) {
+      this.gridSystem.destroy();
+      this.gridSystem = null;
+    }
+
+    // Create new GridSystem and add to scene
+    this.gridSystem = new GridSystem(this, {
+      enabled: true,          // Enable by default for development
+      showBounds: false,      // Hide bounds to reduce visual noise
+      showGrid: true,         // Show grid for alignment help
+      gridAlpha: 0.5,         // More visible grid for testing
+    });
+
+    // Ensure grid graphics is properly added to the scene
+    const gridGraphics = this.gridSystem.getGraphics();
+    if (gridGraphics) {
+      this.children.add(gridGraphics);
+      console.log("🟩 GridSystem graphics added to scene");
+    }
   }
 
   async executeStoryCode(
@@ -177,8 +208,12 @@ class ViewerScene extends Phaser.Scene {
       this.createdComponent = null;
       console.log("🧹 ViewerScene: Cleared previous components and references");
 
-      // Add background
-      this.add.rectangle(this.sceneWidth / 2, this.sceneHeight / 2, this.sceneWidth, this.sceneHeight, this.sceneBackgroundColor);
+      // Add background (behind grid at depth -2000)
+      const background = this.add.rectangle(this.sceneWidth / 2, this.sceneHeight / 2, this.sceneWidth, this.sceneHeight, this.sceneBackgroundColor);
+      background.setDepth(-2000);
+
+      // Always create fresh GridSystem before adding components
+      this.createGridSystem();
 
       // Note: Assets are already loaded by PreloadScene, so we can directly use them
 
@@ -433,15 +468,51 @@ class ViewerScene extends Phaser.Scene {
 
   resetComponentStateSync() {
     console.log("🔄 Synchronous component state reset");
+    
     // Clear previous objects and component reference
     this.children.removeAll();
     this.createdComponent = null;
     
-    // Add background
-    this.add.rectangle(this.sceneWidth / 2, this.sceneHeight / 2, this.sceneWidth, this.sceneHeight, this.sceneBackgroundColor);
+    // Add background (behind grid at depth -2000)
+    const background = this.add.rectangle(this.sceneWidth / 2, this.sceneHeight / 2, this.sceneWidth, this.sceneHeight, this.sceneBackgroundColor);
+    background.setDepth(-2000);
+    
+    // Always create fresh GridSystem for simplicity
+    this.createGridSystem();
     
     console.log("🔄 Component state cleared, ready for fresh execution");
     return Promise.resolve();
+  }
+
+  // Grid system control methods
+  toggleGrid() {
+    if (this.gridSystem) {
+      this.gridSystem.toggleGrid();
+    }
+  }
+
+  toggleBounds() {
+    if (this.gridSystem) {
+      this.gridSystem.toggleBounds();
+    }
+  }
+
+  toggleGridSystem() {
+    if (this.gridSystem) {
+      this.gridSystem.toggle();
+    }
+  }
+
+  setGridSize(size: number) {
+    if (this.gridSystem) {
+      this.gridSystem.setGridSize(size);
+    }
+  }
+
+  setGridDivisions(divisions: number) {
+    if (this.gridSystem) {
+      this.gridSystem.setGridDivisions(divisions);
+    }
   }
 
   async resetComponentState() {

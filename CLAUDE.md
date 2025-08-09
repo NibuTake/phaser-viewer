@@ -55,6 +55,13 @@ The CLI (`bin/phaser-viewer.js`) automatically generates:
 - Uses esbuild for TypeScript compilation
 - Default configuration: `filePath: './src/**/*.demo.ts'`
 
+**Path Alias Support** (v0.1.8+):
+- Auto-detects TypeScript path aliases from `tsconfig.json`
+- Converts `compilerOptions.paths` to Vite aliases automatically
+- User can override with manual Vite configuration
+- Supports both array and object alias formats
+- ESM imports (node:path, node:fs) for Vite compatibility
+
 ### Demo System Architecture
 
 **Demo Discovery**: 

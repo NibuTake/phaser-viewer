@@ -1,0 +1,13 @@
+{
+  "name": "phaser-viewer-test-latest",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "phaser-viewer": "phaser-viewer",
+    "test": "phaser-viewer test"
+  },
+  "dependencies": {
+    "phaser": "^3.70.0",
+    "phaser-viewer": "file:../../phaser-viewer-0.1.9.tgz"
+  }
+}
