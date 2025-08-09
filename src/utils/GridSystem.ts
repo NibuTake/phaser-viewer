@@ -16,13 +16,21 @@ export interface GridSystemConfig {
 }
 
 /**
+ * Extended configuration with computed square grid properties
+ */
+interface ExtendedGridSystemConfig extends Required<GridSystemConfig> {
+  divisionsX: number;
+  divisionsY: number;
+}
+
+/**
  * Grid system for development assistance in Phaser scenes
  * Provides visual guides for component positioning and alignment
  */
 export class GridSystem {
   private scene: Phaser.Scene;
   private graphics: Phaser.GameObjects.Graphics;
-  private config: Required<GridSystemConfig>;
+  private config: ExtendedGridSystemConfig;
   private sceneWidth: number;
   private sceneHeight: number;
 
@@ -45,14 +53,9 @@ export class GridSystem {
       gridAlpha: config.gridAlpha ?? 0.2,
       boundsColor: config.boundsColor ?? 0x00ff00,
       boundsAlpha: config.boundsAlpha ?? 0.5,
-    } as Required<GridSystemConfig> & {
-      divisionsX: number;
-      divisionsY: number;
+      divisionsX: squareGridConfig.divisionsX,
+      divisionsY: squareGridConfig.divisionsY,
     };
-    
-    // Add square grid specific properties
-    (this.config as any).divisionsX = squareGridConfig.divisionsX;
-    (this.config as any).divisionsY = squareGridConfig.divisionsY;
 
     // Create graphics object
     this.graphics = scene.add.graphics();
@@ -64,8 +67,8 @@ export class GridSystem {
       showBounds: this.config.showBounds,
       gridSize: this.config.gridSize,
       gridDivisions: this.config.gridDivisions,
-      divisionsX: (this.config as any).divisionsX,
-      divisionsY: (this.config as any).divisionsY,
+      divisionsX: this.config.divisionsX,
+      divisionsY: this.config.divisionsY,
       gridAlpha: this.config.gridAlpha,
       sceneSize: `${this.sceneWidth}x${this.sceneHeight}`
     });
@@ -187,8 +190,8 @@ export class GridSystem {
   private drawGrid(): void {
     this.graphics.lineStyle(1, this.config.gridColor, this.config.gridAlpha);
     
-    const divisionsX = (this.config as any).divisionsX;
-    const divisionsY = (this.config as any).divisionsY;
+    const divisionsX = this.config.divisionsX;
+    const divisionsY = this.config.divisionsY;
     const cellWidth = this.sceneWidth / divisionsX;
     const cellHeight = this.sceneHeight / divisionsY;
     
@@ -276,8 +279,8 @@ export class GridSystem {
     const squareGridConfig = this.calculateSquareGridConfig(size, undefined);
     this.config.gridSize = squareGridConfig.cellSize;
     this.config.gridDivisions = squareGridConfig.divisions;
-    (this.config as any).divisionsX = squareGridConfig.divisionsX;
-    (this.config as any).divisionsY = squareGridConfig.divisionsY;
+    this.config.divisionsX = squareGridConfig.divisionsX;
+    this.config.divisionsY = squareGridConfig.divisionsY;
     if (this.config.enabled) {
       this.draw();
     }
@@ -290,8 +293,8 @@ export class GridSystem {
     const squareGridConfig = this.calculateSquareGridConfig(undefined, divisions);
     this.config.gridDivisions = squareGridConfig.divisions;
     this.config.gridSize = squareGridConfig.cellSize;
-    (this.config as any).divisionsX = squareGridConfig.divisionsX;
-    (this.config as any).divisionsY = squareGridConfig.divisionsY;
+    this.config.divisionsX = squareGridConfig.divisionsX;
+    this.config.divisionsY = squareGridConfig.divisionsY;
     if (this.config.enabled) {
       this.draw();
     }
@@ -310,7 +313,7 @@ export class GridSystem {
   /**
    * Get current configuration
    */
-  public getConfig(): Required<GridSystemConfig> {
+  public getConfig(): ExtendedGridSystemConfig {
     return { ...this.config };
   }
 

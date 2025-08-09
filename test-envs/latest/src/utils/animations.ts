@@ -11,8 +11,8 @@ export const ANIMATIONS = {
     const scene = target.scene;
     const startOffset = 200;
     
-    let startX = target.x;
-    let startY = target.y;
+    const startX = target.x;
+    const startY = target.y;
     
     switch (direction) {
       case 'left':
